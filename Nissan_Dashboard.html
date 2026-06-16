@@ -51,7 +51,7 @@
   .header .titles h1{font-size:1.45rem;font-weight:700;letter-spacing:0.01em;color:#FFFFFF;}
   .header .titles p{font-size:0.82rem;color:rgba(255,255,255,0.75);margin-top:0.15rem;font-weight:500;}
 
-  .wrap{max-width:1400px;margin:0 auto;padding:1.5rem 2.5rem 0;}
+  .wrap{max-width:1400px;margin:0 auto;padding:2.5rem 2.5rem 0;}
 
   .section-label{
     font-size:0.72rem;font-weight:700;letter-spacing:0.12em;
@@ -477,9 +477,13 @@
 
   <div class="refresh-bar">
     <span id="sync-status"><span class="dot"></span> Live &middot; <span id="last-updated">loading...</span></span>
-    <label class="filter-label" for="date-filter">Created Date:</label>
+    <label class="filter-label" for="month-filter">Month:</label>
+    <select id="month-filter" onchange="onMonthChange()">
+      <option value="all">All months</option>
+    </select>
+    <label class="filter-label" for="date-filter">Day:</label>
     <select id="date-filter" onchange="onFilterChange()">
-      <option value="all">All dates</option>
+      <option value="all">All days</option>
     </select>
     <button onclick="loadAll()">&#8635; Refresh</button>
   </div>
@@ -532,6 +536,7 @@ const SHEETS = {
 
 let ALL_DATA = {};   // raw rows per sheet key
 let FILTER = 'all';
+let FILTER_MONTH = 'all';
 let ALL_DATES = new Set();
 let loaded = 0;
 const TOTAL_SHEETS = 3;
@@ -548,12 +553,21 @@ function esc(s) {
 function parseDate(str) {
   if (!str) return null;
   str = str.trim().split(' ')[0];
-  // try DD/MM/YYYY
   const a = str.split('/');
-  if (a.length === 3) {
-    const [x,y,z] = a;
-    if (x.length <= 2) return z+'-'+y.padStart(2,'0')+'-'+x.padStart(2,'0');
-    return x+'-'+y.padStart(2,'0')+'-'+z.padStart(2,'0');
+  if (a.length !== 3) return null;
+  const [p1, p2, p3] = a;
+  // If p3 is 4 digits it's the year
+  if (p3.length === 4) {
+    // Could be DD/MM/YYYY or MM/DD/YYYY
+    // Assume DD/MM/YYYY (most common in this dataset)
+    const d = p1.padStart(2,'0');
+    const m = p2.padStart(2,'0');
+    const y = p3;
+    return y+'-'+m+'-'+d;
+  }
+  // If p1 is 4 digits → YYYY/MM/DD
+  if (p1.length === 4) {
+    return p1+'-'+p2.padStart(2,'0')+'-'+p3.padStart(2,'0');
   }
   return null;
 }
@@ -566,6 +580,8 @@ function loadAll() {
   loaded = 0;
   ALL_DATA = {};
   ALL_DATES = new Set();
+  FILTER = 'all';
+  FILTER_MONTH = 'all';
   document.getElementById('load-status').style.display = 'block';
   document.getElementById('load-status').className = 'load-status';
   document.getElementById('load-status').textContent = 'Loading data from 3 Google Sheets...';
@@ -603,27 +619,61 @@ function onAllLoaded() {
 }
 
 function populateDateFilter() {
-  const sorted = [...ALL_DATES].sort();
-  const sel = document.getElementById('date-filter');
-  const prev = FILTER;
-  sel.innerHTML = '<option value="all">All dates</option>';
-  sorted.forEach(iso => {
+  const sorted = [...ALL_DATES].sort((a,b) => a.localeCompare(b));
+  const months = [...new Set(sorted.map(iso => iso.slice(0,7)))].sort();
+
+  const monthSel = document.getElementById('month-filter');
+  const prevMonth = FILTER_MONTH;
+  monthSel.innerHTML = '<option value="all">All months</option>';
+  months.forEach(ym => {
+    const [y,m] = ym.split('-');
+    const label = new Date(parseInt(y), parseInt(m)-1, 1).toLocaleString('en-US', {month:'long', year:'numeric'});
+    const o = document.createElement('option');
+    o.value = ym; o.textContent = label;
+    monthSel.appendChild(o);
+  });
+  monthSel.value = (prevMonth !== 'all' && months.includes(prevMonth)) ? prevMonth : 'all';
+  FILTER_MONTH = monthSel.value;
+
+  populateDayFilter(sorted);
+}
+
+function populateDayFilter(sortedDates) {
+  const daySel = document.getElementById('date-filter');
+  daySel.innerHTML = '<option value="all">All days</option>';
+  const days = sortedDates.filter(iso =>
+    FILTER_MONTH === 'all' || iso.slice(0,7) === FILTER_MONTH
+  );
+  days.forEach(iso => {
     const o = document.createElement('option');
     o.value = iso; o.textContent = fmtDate(iso);
-    sel.appendChild(o);
+    daySel.appendChild(o);
   });
-  sel.value = (prev !== 'all' && sorted.includes(prev)) ? prev : 'all';
-  FILTER = sel.value;
+  const validDay = days.includes(FILTER);
+  daySel.value = validDay ? FILTER : 'all';
+  FILTER = daySel.value;
+}
+
+function onMonthChange() {
+  FILTER_MONTH = document.getElementById('month-filter').value;
+  FILTER = 'all';
+  const sorted = [...ALL_DATES].sort((a,b) => a.localeCompare(b));
+  populateDayFilter(sorted);
+  applyFilterAndRender();
 }
 
 function onFilterChange() {
   FILTER = document.getElementById('date-filter').value;
-  renderAll();
+  applyFilterAndRender();
 }
 
 function filterRows(rows, cfg) {
-  if (FILTER === 'all') return rows;
-  return rows.filter(r => parseDate(r[cfg.dateCol]) === FILTER);
+  if (FILTER !== 'all') return rows.filter(r => parseDate(r[cfg.dateCol]) === FILTER);
+  if (FILTER_MONTH !== 'all') return rows.filter(r => {
+    const iso = parseDate(r[cfg.dateCol]);
+    return iso && iso.slice(0,7) === FILTER_MONTH;
+  });
+  return rows;
 }
 
 function renderAll() {
