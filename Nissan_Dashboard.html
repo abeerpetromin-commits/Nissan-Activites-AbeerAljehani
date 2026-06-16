@@ -67,6 +67,10 @@
     grid-template-columns:repeat(4,1fr);
     gap:1rem;
   }
+  .kpi-row:empty{display:none;margin:0;padding:0;}
+  .funnel-row:empty{display:none;}
+  #kpi-1km:empty,#kpi-10k:empty,#kpi-lost:empty{display:none;height:0;margin:0;padding:0;border:none;gap:0;}
+  #funnel-1km:empty,#funnel-10k:empty,#funnel-lost:empty{display:none;height:0;margin:0;}
   .kpi{
     background:var(--panel);
     border:1px solid var(--line);
@@ -504,15 +508,15 @@
     </div>
 
     <div id="tab-1km" class="tab-content active">
-      <div class="kpi-row" id="kpi-1km"></div>
-      <div class="funnel-row" id="funnel-1km"></div>
+      <div class="kpi-row" id="kpi-1km" style="margin-top:0;min-height:0;"></div>
+      <div class="funnel-row" id="funnel-1km" style="min-height:0;"></div>
     </div>
     <div id="tab-10k" class="tab-content">
-      <div class="kpi-row" id="kpi-10k"></div>
+      <div class="kpi-row" id="kpi-10k" style="margin-top:0;"></div>
       <div class="funnel-row" id="funnel-10k"></div>
     </div>
     <div id="tab-lost" class="tab-content">
-      <div class="kpi-row" id="kpi-lost"></div>
+      <div class="kpi-row" id="kpi-lost" style="margin-top:0;"></div>
       <div class="funnel-row" id="funnel-lost"></div>
     </div>
 
@@ -557,16 +561,14 @@ function parseDate(str) {
   const a = str.split('/');
   if (a.length !== 3) return null;
   const [p1, p2, p3] = a;
-  // If p3 is 4 digits it's the year
+  // Format is MM/DD/YYYY (as seen in the sheets data e.g. 04/07/2026)
   if (p3.length === 4) {
-    // Could be DD/MM/YYYY or MM/DD/YYYY
-    // Assume DD/MM/YYYY (most common in this dataset)
-    const d = p1.padStart(2,'0');
-    const m = p2.padStart(2,'0');
+    const m = p1.padStart(2,'0');
+    const d = p2.padStart(2,'0');
     const y = p3;
     return y+'-'+m+'-'+d;
   }
-  // If p1 is 4 digits → YYYY/MM/DD
+  // YYYY/MM/DD
   if (p1.length === 4) {
     return p1+'-'+p2.padStart(2,'0')+'-'+p3.padStart(2,'0');
   }
