@@ -497,10 +497,7 @@
 
   <div id="dashboard-content" style="display:none;">
 
-    <div class="section-label">Overall Summary &mdash; All Sheets Combined</div>
-    <div class="kpi-row" id="summary-kpi"></div>
-
-    <div class="section-label" style="margin-top:1.6rem;">Sheet Detail</div>
+    <div class="section-label">Sheet Detail</div>
     <div class="tab-bar">
       <button class="tab-btn active" onclick="switchTab('1km')">1km Calls</button>
       <button class="tab-btn" onclick="switchTab('10k')">10k Calls</button>
@@ -508,15 +505,15 @@
     </div>
 
     <div id="tab-1km" class="tab-content active">
-      <div class="kpi-row" id="kpi-1km" style="margin-top:0;min-height:0;"></div>
-      <div class="funnel-row" id="funnel-1km" style="min-height:0;"></div>
+      <div id="kpi-1km" style="display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;margin-bottom:1rem;"></div>
+      <div class="funnel-row" id="funnel-1km"></div>
     </div>
     <div id="tab-10k" class="tab-content">
-      <div class="kpi-row" id="kpi-10k" style="margin-top:0;"></div>
+      <div id="kpi-10k" style="display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;margin-bottom:1rem;"></div>
       <div class="funnel-row" id="funnel-10k"></div>
     </div>
     <div id="tab-lost" class="tab-content">
-      <div class="kpi-row" id="kpi-lost" style="margin-top:0;"></div>
+      <div id="kpi-lost" style="display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;margin-bottom:1rem;"></div>
       <div class="funnel-row" id="funnel-lost"></div>
     </div>
 
@@ -662,12 +659,12 @@ function onMonthChange() {
   FILTER = 'all';
   const sorted = [...ALL_DATES].sort((a,b) => a.localeCompare(b));
   populateDayFilter(sorted);
-  applyFilterAndRender();
+  renderAll();
 }
 
 function onFilterChange() {
   FILTER = document.getElementById('date-filter').value;
-  applyFilterAndRender();
+  renderAll();
 }
 
 function filterRows(rows, cfg) {
@@ -680,18 +677,12 @@ function filterRows(rows, cfg) {
 }
 
 function renderAll() {
-  let totalTotal=0, totalAnswered=0, totalBooked=0, totalNoAns=0;
   Object.entries(SHEETS).forEach(([key, cfg]) => {
     const rows = filterRows(ALL_DATA[key]||[], cfg);
     const stats = computeStats(rows, cfg);
     renderKpi('kpi-'+key, stats, cfg.label);
     renderFunnel('funnel-'+key, stats);
-    totalTotal    += stats.total;
-    totalAnswered += stats.answered;
-    totalBooked   += stats.booked;
-    totalNoAns    += stats.noAnswer;
   });
-  renderSummaryKpi(totalTotal, totalAnswered, totalBooked, totalNoAns);
 }
 
 function computeStats(rows, cfg) {
