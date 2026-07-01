@@ -1,0 +1,1015 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Nissan Retention Team Activities Dashboard</title>
+<style>
+  :root{
+    --bg:#F5F5F5;
+    --panel:#FFFFFF;
+    --line:#E5E5E5;
+    --text:#1A1A1A;
+    --text-dim:#5A5A5A;
+    --text-mute:#9A9A9A;
+    --red:#C50030;
+    --red-soft:#FDE5EA;
+    --green:#1FA15A;
+    --green-soft:#E5F5EC;
+    --blue:#1A1A2E;
+    --blue-soft:#EEEEF5;
+    --skyblue:#C50030;
+    --gray:#D0D0D0;
+    --gray-soft:#F0F0F0;
+    --amber:#F0A500;
+    --totalbar:#F0A500;
+    --sans:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  html,body{background:var(--bg);color:var(--text);font-family:var(--sans);}
+  body{min-height:100vh;padding-bottom:3rem;}
+
+  .header{
+    background:linear-gradient(135deg,#8B0020 0%,#C50030 50%,#E8003A 100%);
+    color:#fff;
+    padding:1.4rem 2.5rem;
+    display:flex;
+    align-items:center;
+    gap:1.4rem;
+    box-shadow:0 3px 12px rgba(197,0,48,0.35);
+  }
+  .header .logo{
+    display:flex;align-items:center;
+  }
+  .header .logo img{height:72px;display:block;border-radius:6px;}
+  .header .titles h1{font-size:1.45rem;font-weight:700;letter-spacing:0.01em;color:#FFFFFF;}
+  .header .titles p{font-size:0.82rem;color:rgba(255,255,255,0.75);margin-top:0.15rem;font-weight:500;}
+
+  .wrap{max-width:1400px;margin:0 auto;padding:0 2.5rem;}
+  .refresh-bar{margin-top:1.8rem;}
+
+  .section-label{
+    font-size:0.72rem;font-weight:700;letter-spacing:0.12em;
+    color:#7C8AA0;text-transform:uppercase;
+    padding:1.6rem 0 0.8rem;
+    border-bottom:1px solid var(--line);
+    margin-bottom:1.2rem;
+  }
+
+  .kpi-row{
+    display:grid;
+    grid-template-columns:repeat(4,1fr);
+    gap:1rem;
+  }
+  .kpi-row:empty{display:none;margin:0;padding:0;}
+  .funnel-row:empty{display:none;}
+  #kpi-1km:empty,#kpi-10k:empty,#kpi-lost:empty,#kpi-sf:empty{display:none;height:0;margin:0;padding:0;border:none;gap:0;}
+  #funnel-1km:empty,#funnel-10k:empty,#funnel-lost:empty,#funnel-sf:empty{display:none;height:0;margin:0;}
+  .kpi{
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:8px;
+    padding:1rem 1.1rem;
+    border-top:3px solid var(--blue);
+    box-shadow:0 1px 2px rgba(20,30,50,0.04);
+  }
+  .kpi.kpi-accent{border-top-color:var(--green);}
+  .kpi .range{
+    font-size:0.65rem;font-weight:700;letter-spacing:0.06em;
+    color:var(--text-mute);text-transform:uppercase;margin-bottom:0.5rem;
+  }
+  .kpi .title{font-size:0.82rem;color:var(--text-dim);margin-bottom:0.3rem;}
+  .kpi .value{font-size:1.7rem;font-weight:800;color:var(--text);letter-spacing:-0.01em;}
+  .kpi .sub{font-size:0.74rem;color:var(--text-mute);margin-top:0.35rem;}
+  .kpi .delta{font-size:0.74rem;margin-top:0.25rem;font-weight:600;}
+  .kpi .delta.up{color:var(--green);}
+  .kpi .delta.down{color:var(--red);}
+
+  .funnel-row{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(280px,1fr));
+    gap:1rem;
+    margin-bottom:2rem;
+  }
+  .funnel-card{
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:8px;
+    padding:1.2rem 1.3rem 1.4rem;
+    box-shadow:0 1px 2px rgba(20,30,50,0.04);
+  }
+  .funnel-card h3{font-size:1rem;font-weight:700;}
+  .funnel-card .journey{
+    font-size:0.74rem;color:var(--text-mute);margin-top:0.15rem;margin-bottom:1.1rem;
+  }
+  .funnel-card .sub-title{
+    font-size:0.88rem;font-weight:700;color:var(--text);
+    margin:0.9rem 0 0.6rem;
+  }
+
+  .fbar-row{
+    display:grid;
+    grid-template-columns:90px 1fr;
+    align-items:center;
+    gap:0.6rem;
+    margin-bottom:0.6rem;
+  }
+  .fbar-label{
+    font-size:0.78rem;color:var(--text-dim);text-align:right;
+    white-space:nowrap;
+  }
+  .fbar-track{position:relative;height:30px;}
+  .fbar-fill{
+    height:100%;border-radius:4px;
+    display:flex;align-items:center;
+    padding:0 0.6rem;
+    font-weight:700;font-size:0.85rem;color:#fff;
+    min-width:36px;
+  }
+  .fbar-fill.gray{color:var(--text-mute);background:var(--gray-soft);border:1px solid var(--gray);}
+
+  .reasons-label{
+    font-size:0.7rem;font-weight:700;letter-spacing:0.1em;color:var(--text-mute);
+    text-transform:uppercase;margin:1.3rem 0 0.7rem;
+  }
+  .reason-row{
+    display:grid;
+    grid-template-columns:1fr 1.4fr 32px;
+    align-items:center;
+    gap:0.5rem;
+    margin-bottom:0.45rem;
+  }
+  .reason-label{font-size:0.78rem;color:var(--text-dim);}
+  .reason-track{
+    height:8px;background:var(--gray-soft);border-radius:4px;overflow:hidden;
+  }
+  .reason-fill{height:100%;border-radius:4px;}
+  .reason-val{font-size:0.78rem;color:var(--text-dim);text-align:right;font-weight:600;}
+
+  .reason-row.with-detail{margin-bottom:0.15rem;}
+  .reason-detail{
+    grid-column:1 / -1;
+    font-size:0.7rem;color:var(--text-mute);
+    margin:0 0 0.7rem;
+    padding-left:0.1rem;
+  }
+  .reason-detail b{color:var(--text-dim);font-weight:600;}
+
+  .advisor-group{margin-bottom:1.1rem;}
+  .advisor-group-head{
+    display:flex;align-items:center;justify-content:space-between;
+    margin-bottom:0.5rem;
+  }
+  .advisor-group-head .reason-name{
+    font-size:0.82rem;font-weight:700;color:var(--text);
+  }
+  .advisor-group-head .reason-count{
+    font-size:0.72rem;font-weight:700;color:#fff;
+    background:var(--amber);border-radius:10px;
+    padding:0.1rem 0.55rem;
+  }
+  .advisor-item{
+    display:flex;align-items:center;justify-content:space-between;
+    background:var(--gray-soft);
+    border-radius:6px;
+    padding:0.45rem 0.7rem;
+    margin-bottom:0.35rem;
+  }
+  .advisor-item:last-child{margin-bottom:0;}
+  .advisor-item .name{font-size:0.78rem;font-weight:600;color:var(--text);}
+  .advisor-item .branch{
+    font-size:0.7rem;color:var(--text-mute);
+    background:var(--panel);border:1px solid var(--line);
+    border-radius:4px;padding:0.1rem 0.5rem;
+  }
+
+  .detail-table-wrap{
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:8px;
+    padding:1.2rem 1.3rem 1.4rem;
+    box-shadow:0 1px 2px rgba(20,30,50,0.04);
+    overflow-x:auto;
+    margin-bottom:2rem;
+  }
+  .detail-table-wrap h3{font-size:1rem;font-weight:700;margin-bottom:0.2rem;}
+  .detail-table-wrap .journey{
+    font-size:0.74rem;color:var(--text-mute);margin-bottom:1rem;
+  }
+  table.detail-table{
+    width:100%;border-collapse:collapse;font-size:0.82rem;min-width:760px;
+  }
+  table.detail-table th{
+    text-align:left;font-size:0.7rem;font-weight:700;letter-spacing:0.06em;
+    text-transform:uppercase;color:var(--text-mute);
+    padding:0.6rem 0.7rem;border-bottom:2px solid var(--line);
+  }
+  table.detail-table td{
+    padding:0.65rem 0.7rem;border-bottom:1px solid var(--line);
+    color:var(--text-dim);vertical-align:top;
+  }
+  table.detail-table tr:last-child td{border-bottom:none;}
+  table.detail-table td.hl{color:var(--text);font-weight:600;}
+  table.detail-table td.wip{font-family:monospace;font-size:0.78rem;color:var(--text-mute);}
+  table.detail-table .status-pill{
+    display:inline-block;font-size:0.7rem;font-weight:700;
+    padding:0.15rem 0.55rem;border-radius:10px;
+  }
+  table.detail-table .status-pill.no{background:var(--red-soft);color:var(--red);}
+  table.detail-table .status-pill.yes{background:var(--green-soft);color:var(--green);}
+  table.detail-table .reason-tag{
+    display:inline-block;font-size:0.72rem;font-weight:600;
+    background:var(--amber);color:#fff;
+    padding:0.15rem 0.55rem;border-radius:5px;
+    white-space:nowrap;
+  }
+  table.detail-table .comment-cell{
+    font-size:0.76rem;line-height:1.5;max-width:280px;
+  }
+  table.detail-table .comment-cell .ar{direction:rtl;unicode-bidi:embed;display:block;}
+  table.detail-table .comment-cell .none{color:var(--text-mute);font-style:italic;}
+
+  .accordion{display:flex;flex-direction:column;gap:0.6rem;}
+  .accordion-item{
+    border:1px solid var(--line);
+    border-radius:8px;
+    overflow:hidden;
+  }
+  .accordion-header{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:0.85rem 1.1rem;
+    background:var(--gray-soft);
+    cursor:pointer;
+    user-select:none;
+    transition:background 0.15s ease;
+  }
+  .accordion-header:hover{background:var(--red-soft);}
+  .accordion-header .branch-name{
+    font-size:0.92rem;font-weight:700;color:var(--text);
+    display:flex;align-items:center;gap:0.6rem;
+  }
+  .accordion-header .branch-meta{
+    display:flex;align-items:center;gap:0.6rem;
+  }
+  .accordion-header .case-count{
+    font-size:0.72rem;font-weight:700;color:#fff;
+    background:var(--amber);border-radius:10px;
+    padding:0.15rem 0.6rem;
+  }
+  .accordion-header .chevron{
+    font-size:0.8rem;color:var(--text-mute);
+    transition:transform 0.2s ease;
+  }
+  .accordion-item.open .chevron{transform:rotate(90deg);}
+  .accordion-body{
+    max-height:0;overflow:hidden;
+    transition:max-height 0.25s ease;
+  }
+  .accordion-item.open .accordion-body{max-height:1200px;}
+  .accordion-case{
+    padding:0.9rem 1.1rem;
+    border-top:1px solid var(--line);
+  }
+  .accordion-case:first-child{border-top:1px solid var(--line);}
+  .accordion-case-head{
+    display:flex;align-items:center;justify-content:space-between;
+    flex-wrap:wrap;gap:0.5rem;
+    margin-bottom:0.5rem;
+  }
+  .accordion-case-head .customer{font-size:0.85rem;font-weight:600;color:var(--text);}
+  .accordion-case-head .wip-tag{
+    font-family:monospace;font-size:0.72rem;color:var(--text-mute);
+  }
+  .accordion-case-tags{display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap;margin-bottom:0.5rem;}
+  .accordion-case-comment{
+    font-size:0.8rem;line-height:1.55;color:var(--text-dim);
+    background:var(--gray-soft);border-radius:6px;
+    padding:0.6rem 0.8rem;
+  }
+  .accordion-case-comment.none{font-style:italic;color:var(--text-mute);}
+
+  .accordion-table{width:100%;border-collapse:collapse;}
+  .accordion-table th{
+    text-align:left;font-size:0.7rem;font-weight:700;letter-spacing:0.06em;
+    text-transform:uppercase;color:var(--text-mute);
+    padding:0.7rem 1.1rem 0.5rem;
+  }
+  .accordion-table td{
+    padding:0.75rem 1.1rem;border-top:1px solid var(--line);
+    color:var(--text-dim);vertical-align:top;font-size:0.85rem;
+  }
+  .accordion-table td.customer-cell{font-weight:600;color:var(--text);white-space:nowrap;}
+  .accordion-table td.comment-cell{font-size:0.8rem;line-height:1.5;}
+  .accordion-table td.comment-cell .none{color:var(--text-mute);font-style:italic;}
+
+  .accordion-item.reason-group > .accordion-header{
+    background:var(--blue-soft);
+  }
+  .accordion-item.reason-group > .accordion-header:hover{background:var(--red-soft);}
+  .accordion-item.reason-group .branch-name{font-size:0.95rem;}
+  .nested-accordion{padding:0.4rem 0.7rem 0.7rem;display:flex;flex-direction:column;gap:0.45rem;}
+  .nested-accordion .accordion-item{border-radius:6px;}
+  .nested-accordion .accordion-header{padding:0.6rem 0.9rem;background:var(--panel);border:1px solid var(--line);border-radius:6px;}
+  .nested-accordion .accordion-header:hover{background:var(--gray-soft);}
+  .nested-accordion .branch-name{font-size:0.85rem;font-weight:600;}
+  .nested-accordion .accordion-item.open > .accordion-header{border-bottom-left-radius:0;border-bottom-right-radius:0;}
+  .nested-accordion .accordion-body table.accordion-table{font-size:0.8rem;}
+
+  /* Pivot table */
+  table.pivot-table{
+    width:100%;border-collapse:collapse;font-size:0.85rem;
+  }
+  table.pivot-table th{
+    text-align:center;font-size:0.72rem;font-weight:700;color:var(--text-dim);
+    background:var(--gray-soft);
+    padding:0.6rem 0.7rem;border:1px solid var(--line);
+    line-height:1.3;
+  }
+  table.pivot-table th.pivot-corner{text-align:left;background:var(--panel-2,var(--gray-soft));}
+  table.pivot-table th.pivot-total{background:var(--blue-soft);color:var(--blue);}
+  table.pivot-table td{
+    border:1px solid var(--line);
+    padding:0.6rem 0.7rem;text-align:center;
+    color:var(--text-dim);
+  }
+  table.pivot-table td.pivot-branch{
+    text-align:left;font-weight:700;color:var(--text);
+    background:var(--gray-soft);
+  }
+  table.pivot-table td.pivot-total{
+    font-weight:700;background:var(--blue-soft);color:var(--blue);
+  }
+  table.pivot-table tr.pivot-grand td{
+    font-weight:700;background:var(--gray-soft);color:var(--text);
+  }
+  table.pivot-table tr.pivot-grand td.pivot-total{
+    background:var(--red);color:#fff;
+  }
+  table.pivot-table td.pivot-cell.active{
+    font-weight:700;color:#fff;background:var(--amber);
+    cursor:pointer;border-radius:5px;
+    transition:transform 0.12s ease, box-shadow 0.12s ease;
+  }
+  table.pivot-table td.pivot-cell.active:hover{
+    transform:scale(1.06);
+    box-shadow:0 2px 6px rgba(0,0,0,0.15);
+  }
+  table.pivot-table td.pivot-cell.active.selected{
+    background:var(--red);
+    box-shadow:0 0 0 2px var(--red-soft) inset;
+  }
+
+  /* Case detail panel */
+  .case-detail{
+    margin-top:1.2rem;
+    border:1px dashed var(--line);
+    border-radius:8px;
+    padding:1rem 1.2rem;
+    background:var(--gray-soft);
+    min-height:60px;
+  }
+  .case-detail-placeholder{
+    font-size:0.82rem;color:var(--text-mute);font-style:italic;
+    display:flex;align-items:center;height:40px;
+  }
+  .case-detail-head{
+    display:flex;align-items:center;justify-content:space-between;
+    margin-bottom:0.6rem;flex-wrap:wrap;gap:0.4rem;
+  }
+  .case-detail-title{font-size:1rem;font-weight:700;color:var(--text);}
+  .case-detail .wip-tag{font-family:monospace;font-size:0.75rem;color:var(--text-mute);}
+  .case-detail-tags{display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:0.8rem;}
+  .case-detail-tags .pill-static{
+    display:inline-block;font-size:0.72rem;font-weight:600;
+    padding:0.15rem 0.6rem;border-radius:5px;
+    background:var(--panel);border:1px solid var(--line);color:var(--text-dim);
+  }
+  .case-detail-comment-label{
+    font-size:0.68rem;font-weight:700;letter-spacing:0.1em;
+    text-transform:uppercase;color:var(--text-mute);margin-bottom:0.35rem;
+  }
+  .case-detail-comment{
+    font-size:0.85rem;line-height:1.6;color:var(--text-dim);
+    background:var(--panel);border:1px solid var(--line);
+    border-radius:6px;padding:0.7rem 0.9rem;
+  }
+  .case-detail-comment .none{font-style:italic;color:var(--text-mute);}
+
+  @media (max-width:760px){
+    table.pivot-table{font-size:0.72rem;}
+    table.pivot-table th, table.pivot-table td{padding:0.4rem 0.35rem;}
+  }
+
+  @media (max-width:1200px){
+    .kpi-row{grid-template-columns:repeat(3,1fr);}
+    .funnel-row{grid-template-columns:repeat(2,1fr);}
+  }
+  @media (max-width:760px){
+    .kpi-row{grid-template-columns:repeat(2,1fr);}
+    .funnel-row{grid-template-columns:1fr;}
+    .wrap{padding:0 1.1rem;}
+    .header{padding:1.2rem 1.1rem;}
+  }
+
+  .tab-bar{
+    display:flex;gap:0;border-bottom:2px solid var(--line);
+    margin-bottom:1.4rem;
+  }
+  .tab-btn{
+    padding:0.65rem 1.3rem;font-size:0.82rem;font-weight:600;
+    color:var(--text-mute);background:none;border:none;cursor:pointer;
+    border-bottom:2px solid transparent;margin-bottom:-2px;
+    transition:color 0.15s;
+  }
+  .tab-btn:hover{color:var(--text);}
+  .tab-btn.active{color:var(--red);border-bottom-color:var(--red);}
+  .tab-content{display:none;}
+  .tab-content.active{display:block;}
+  .load-status{text-align:center;padding:2rem;color:var(--text-mute);font-size:0.85rem;}
+  .load-status.error{color:var(--red);}
+  .refresh-bar{
+    display:flex;align-items:center;justify-content:flex-end;flex-wrap:wrap;
+    gap:0.6rem;font-size:0.74rem;color:var(--text-mute);padding:0.6rem 0;
+  }
+  .refresh-bar button{
+    font-size:0.74rem;font-weight:600;color:var(--red);
+    background:var(--red-soft);border:1px solid var(--red-soft);
+    border-radius:5px;padding:0.3rem 0.8rem;cursor:pointer;
+  }
+  .refresh-bar button:hover{background:var(--gray-soft);}
+  .refresh-bar .dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--green);}
+  .refresh-bar .filter-label{font-weight:600;color:var(--text-dim);}
+  .refresh-bar select{
+    font-size:0.78rem;font-family:var(--sans);color:var(--text);
+    background:var(--panel);border:1px solid var(--line);
+    border-radius:5px;padding:0.3rem 0.6rem;cursor:pointer;
+  }
+  .summary-grid{
+    display:grid;grid-template-columns:repeat(3,1fr);gap:1.4rem;margin-top:1.4rem;
+  }
+  .summary-card{
+    background:var(--panel);border:1px solid var(--line);border-radius:8px;
+    padding:1.2rem 1.3rem;box-shadow:0 1px 2px rgba(20,10,15,0.05);
+    border-top:3px solid var(--red);
+  }
+  .summary-card h4{font-size:0.92rem;font-weight:700;margin-bottom:0.8rem;color:var(--text);}
+  .summary-card .sc-kpi{font-size:1.6rem;font-weight:800;font-family:var(--mono,'monospace');color:var(--text);}
+  .summary-card .sc-sub{font-size:0.78rem;color:var(--text-mute);margin-top:0.2rem;}
+  @media(max-width:900px){.summary-grid{grid-template-columns:1fr 1fr;}}
+  @media(max-width:600px){.summary-grid{grid-template-columns:1fr;}}
+
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="logo" style="display:flex;align-items:center;">
+    <img src="data:image/png;base64,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" alt="Nissan" style="height:72px;display:block;">
+  </div>
+  <div class="titles">
+    <h1>Nissan Retention Team Activities Dashboard</h1>
+    <p>Live Summary &mdash; 1km &middot; 10k &middot; Lost Customers</p>
+  </div>
+</div>
+
+<div class="wrap">
+
+  <div class="refresh-bar">
+    <span id="sync-status"><span class="dot"></span> Live &middot; <span id="last-updated">loading...</span></span>
+    <label class="filter-label" for="month-filter">Month:</label>
+    <select id="month-filter" onchange="onMonthChange()">
+      <option value="all">All months</option>
+    </select>
+    <label class="filter-label" for="date-filter">Day:</label>
+    <select id="date-filter" onchange="onFilterChange()">
+      <option value="all">All days</option>
+    </select>
+    <button onclick="loadAll()">&#8635; Refresh</button>
+  </div>
+
+  <div id="load-status" class="load-status">Loading live data from Google Sheets&hellip;</div>
+
+  <div id="dashboard-content" style="display:none;">
+
+    <div class="section-label">Sheet Detail</div>
+    <div class="tab-bar">
+      <button class="tab-btn active" onclick="switchTab('1km')">1km Calls</button>
+      <button class="tab-btn" onclick="switchTab('10k')">10k Calls</button>
+      <button class="tab-btn" onclick="switchTab('lost')">Lost Customers</button>
+      <button class="tab-btn" onclick="switchTab('sf')">Salesforce</button>
+    </div>
+
+    <div id="tab-1km" class="tab-content active">
+      <div id="kpi-1km" style="display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;margin-bottom:1rem;"></div>
+      <div class="funnel-row" id="funnel-1km"></div>
+    </div>
+    <div id="tab-10k" class="tab-content">
+      <div id="kpi-10k" style="display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;margin-bottom:1rem;"></div>
+      <div class="funnel-row" id="funnel-10k"></div>
+    </div>
+    <div id="tab-lost" class="tab-content">
+      <div id="kpi-lost" style="display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;margin-bottom:1rem;"></div>
+      <div class="funnel-row" id="funnel-lost"></div>
+    </div>
+    <div id="tab-sf" class="tab-content">
+      <div id="kpi-sf" style="display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;margin-bottom:1rem;"></div>
+      <div class="funnel-row" id="funnel-sf"></div>
+    </div>
+
+  </div>
+
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<script>
+const SHEET_ID = "1FsZ1B8HA_QeHVwMVs0QkYB99w5Sz2MAmJ6r33tHaEyE";
+const SHEETS = {
+  "1km":  { gid: "1444413425",  label: "1km Calls",
+    statusCol: "Status", bookedCol: "Booked?", whyCol: "If no, why?",
+    branchCol: "Branch", dateCol: "Created Date" },
+  "10k":  { gid: "206697134", label: "10k Calls",
+    statusCol: "Status", bookedCol: "Booked?", whyCol: "If no, why?",
+    branchCol: "Branch", dateCol: "Created Date" },
+  "lost": { gid: "2118835780", label: "Lost Customers",
+    statusCol: "Status", bookedCol: "Booked an appointment ?", whyCol: "If no, Why ?",
+    branchCol: "Branch Name", dateCol: "Created Date" },
+  "sf": { gid: "265736254", label: "Salesforce", mode: "salesforce",
+    nameCol: "Account Name", statusCol: "Status",
+    wonValue: "closed won", lostValue: "closed lost",
+    whyCol: "Close Lost Reasons:", branchCol: "Workshop Name", dateCol: "Appointment Start Date" },
+};
+
+let ALL_DATA = {};   // raw rows per sheet key
+let FILTER = 'all';
+let FILTER_MONTH = 'all';
+let ALL_DATES = new Set();
+let loaded = 0;
+const TOTAL_SHEETS = 4;
+
+function csvUrl(cfg, useAlt) {
+  // Two independent Google endpoints for the same data — alternate between them on retry
+  // so a throttle/block on one doesn't sink every attempt.
+  if (useAlt) {
+    if (cfg.gid) {
+      return "https://docs.google.com/spreadsheets/d/" + SHEET_ID + "/gviz/tq?tqx=out:csv&gid=" + cfg.gid;
+    }
+    return "https://docs.google.com/spreadsheets/d/" + SHEET_ID + "/gviz/tq?tqx=out:csv&sheet=" + encodeURIComponent(cfg.sheetName);
+  }
+  if (cfg.sheetName) {
+    return "https://docs.google.com/spreadsheets/d/" + SHEET_ID + "/gviz/tq?tqx=out:csv&sheet=" + encodeURIComponent(cfg.sheetName);
+  }
+  return "https://docs.google.com/spreadsheets/d/" + SHEET_ID + "/export?format=csv&gid=" + cfg.gid;
+}
+
+function pct(n, d) { return d ? (100*n/d).toFixed(1) : "0.0"; }
+function esc(s) {
+  return String(s||'').replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+}
+
+function parseDate(str) {
+  if (!str) return null;
+  str = str.trim().split(' ')[0];
+  const a = str.split('/');
+  if (a.length !== 3) return null;
+  const [p1, p2, p3] = a;
+  // Format is MM/DD/YYYY (as seen in the sheets data e.g. 04/07/2026)
+  if (p3.length === 4) {
+    const m = p1.padStart(2,'0');
+    const d = p2.padStart(2,'0');
+    const y = p3;
+    return y+'-'+m+'-'+d;
+  }
+  // YYYY/MM/DD
+  if (p1.length === 4) {
+    return p1+'-'+p2.padStart(2,'0')+'-'+p3.padStart(2,'0');
+  }
+  return null;
+}
+function fmtDate(iso) {
+  const [y,m,d] = iso.split('-');
+  return d+'/'+m+'/'+y;
+}
+
+function loadAll() {
+  loaded = 0;
+  ALL_DATA = {};
+  ALL_DATES = new Set();
+  FILTER = 'all';
+  FILTER_MONTH = 'all';
+  document.getElementById('load-status').style.display = 'block';
+  document.getElementById('load-status').className = 'load-status';
+  document.getElementById('load-status').textContent = 'Loading data from ' + TOTAL_SHEETS + ' Google Sheets...';
+  document.getElementById('dashboard-content').style.display = 'none';
+
+  const keys = Object.entries(SHEETS);
+  loadSheetSequential(keys, 0);
+}
+
+function loadOneSheet(key, cfg, attempt) {
+  const MAX_ATTEMPTS = 4; // 0,1,2,3 = 4 tries total
+  return new Promise((resolve) => {
+    Papa.parse(csvUrl(cfg, attempt % 2 === 1), {
+      download: true, header: true, skipEmptyLines: true,
+      complete: function(res) {
+        const rows = res.data.filter(r => {
+          const name = r[cfg.nameCol] || r['Customer Name'] || r['Customer Full Name'] || '';
+          return name.trim() !== '';
+        });
+        // If we got 0 rows, it may be a throttled/blocked response from Google
+        // rather than a genuinely empty sheet — retry on the alternate endpoint.
+        if (rows.length === 0 && attempt < MAX_ATTEMPTS - 1) {
+          setTimeout(() => resolve(loadOneSheet(key, cfg, attempt + 1)), 700 * (attempt + 1));
+          return;
+        }
+        ALL_DATA[key] = rows;
+        rows.forEach(r => {
+          const iso = parseDate(r[cfg.dateCol]);
+          if (iso) ALL_DATES.add(iso);
+        });
+        resolve();
+      },
+      error: function() {
+        if (attempt < MAX_ATTEMPTS - 1) {
+          setTimeout(() => resolve(loadOneSheet(key, cfg, attempt + 1)), 700 * (attempt + 1));
+        } else {
+          ALL_DATA[key] = ALL_DATA[key] || [];
+          resolve();
+        }
+      }
+    });
+  });
+}
+
+function loadSheetSequential(keys, idx) {
+  if (idx >= keys.length) {
+    onAllLoaded();
+    return;
+  }
+  const [key, cfg] = keys[idx];
+  loadOneSheet(key, cfg, 0).then(() => {
+    loaded++;
+    loadSheetSequential(keys, idx + 1);
+  });
+}
+
+function onAllLoaded() {
+  populateDateFilter();
+  renderAll();
+  document.getElementById('load-status').style.display = 'none';
+  document.getElementById('dashboard-content').style.display = 'block';
+  document.getElementById('last-updated').textContent = new Date().toLocaleString();
+}
+
+function populateDateFilter() {
+  const sorted = [...ALL_DATES].sort((a,b) => a.localeCompare(b));
+  const months = [...new Set(sorted.map(iso => iso.slice(0,7)))].sort();
+
+  const monthSel = document.getElementById('month-filter');
+  const prevMonth = FILTER_MONTH;
+  monthSel.innerHTML = '<option value="all">All months</option>';
+  months.forEach(ym => {
+    const [y,m] = ym.split('-');
+    const label = new Date(parseInt(y), parseInt(m)-1, 1).toLocaleString('en-US', {month:'long', year:'numeric'});
+    const o = document.createElement('option');
+    o.value = ym; o.textContent = label;
+    monthSel.appendChild(o);
+  });
+  monthSel.value = (prevMonth !== 'all' && months.includes(prevMonth)) ? prevMonth : 'all';
+  FILTER_MONTH = monthSel.value;
+
+  populateDayFilter(sorted);
+}
+
+function populateDayFilter(sortedDates) {
+  const daySel = document.getElementById('date-filter');
+  daySel.innerHTML = '<option value="all">All days</option>';
+  const days = sortedDates.filter(iso =>
+    FILTER_MONTH === 'all' || iso.slice(0,7) === FILTER_MONTH
+  );
+  days.forEach(iso => {
+    const o = document.createElement('option');
+    o.value = iso; o.textContent = fmtDate(iso);
+    daySel.appendChild(o);
+  });
+  const validDay = days.includes(FILTER);
+  daySel.value = validDay ? FILTER : 'all';
+  FILTER = daySel.value;
+}
+
+function onMonthChange() {
+  FILTER_MONTH = document.getElementById('month-filter').value;
+  FILTER = 'all';
+  const sorted = [...ALL_DATES].sort((a,b) => a.localeCompare(b));
+  populateDayFilter(sorted);
+  renderAll();
+}
+
+function onFilterChange() {
+  FILTER = document.getElementById('date-filter').value;
+  renderAll();
+}
+
+function filterRows(rows, cfg) {
+  if (FILTER !== 'all') return rows.filter(r => parseDate(r[cfg.dateCol]) === FILTER);
+  if (FILTER_MONTH !== 'all') return rows.filter(r => {
+    const iso = parseDate(r[cfg.dateCol]);
+    return iso && iso.slice(0,7) === FILTER_MONTH;
+  });
+  return rows;
+}
+
+function renderAll() {
+  Object.entries(SHEETS).forEach(([key, cfg]) => {
+    const rows = filterRows(ALL_DATA[key]||[], cfg);
+    const stats = computeStats(rows, cfg);
+    if (cfg.mode === 'salesforce') {
+      renderKpiSF('kpi-'+key, stats);
+      renderFunnelSF('funnel-'+key, stats);
+    } else {
+      renderKpi('kpi-'+key, stats, cfg.label);
+      renderFunnel('funnel-'+key, stats);
+    }
+  });
+}
+
+function renderKpiSF(elId, s) {
+  document.getElementById(elId).innerHTML = `
+    <div class="kpi k-total">
+      <div class="range">LIVE &mdash; SALESFORCE</div>
+      <div class="title">Total CRM Records</div>
+      <div class="value">${s.total.toLocaleString()}</div>
+      <div class="sub">${s.answered.toLocaleString()} resolved (${pct(s.answered,s.total)}%)</div>
+    </div>
+    <div class="kpi k-attended">
+      <div class="range">LIVE</div>
+      <div class="title">Closed Won</div>
+      <div class="value">${s.booked.toLocaleString()}</div>
+      <div class="sub">${pct(s.booked,s.total)}% of total</div>
+      <div class="delta up">&#8679; Win rate</div>
+    </div>
+    <div class="kpi k-satisfied">
+      <div class="range">LIVE</div>
+      <div class="title">Closed Lost</div>
+      <div class="value">${s.notBooked.toLocaleString()}</div>
+      <div class="sub">${pct(s.notBooked,s.total)}% of total</div>
+    </div>
+    <div class="kpi k-pending">
+      <div class="range">LIVE</div>
+      <div class="title">No Answer</div>
+      <div class="value">${s.noAnswer.toLocaleString()}</div>
+      <div class="sub">${pct(s.noAnswer,s.total)}% of total</div>
+    </div>
+  `;
+}
+
+function renderFunnelSF(elId, s) {
+  const card1 = `
+    <div class="funnel-card">
+      <h3>Closed Outcomes</h3>
+      <div class="journey">Total &rarr; Won / Lost</div>
+      <div class="fbar-row">
+        <div class="fbar-label">Total</div>
+        <div class="fbar-track"><div class="fbar-fill" style="width:100%;background:var(--totalbar);">${s.total.toLocaleString()}</div></div>
+      </div>
+      <div class="fbar-row">
+        <div class="fbar-label">Closed Won</div>
+        <div class="fbar-track"><div class="fbar-fill" style="width:${pct(s.booked,s.total)}%;background:var(--green);">${s.booked.toLocaleString()}</div></div>
+      </div>
+      <div class="fbar-row">
+        <div class="fbar-label">Closed Lost</div>
+        <div class="fbar-track"><div class="fbar-fill" style="width:${pct(s.notBooked,s.total)}%;background:var(--red);">${s.notBooked.toLocaleString()}</div></div>
+      </div>
+      <div class="fbar-row">
+        <div class="fbar-label">No Answer</div>
+        <div class="fbar-track"><div class="fbar-fill gray" style="width:${pct(s.noAnswer,s.total)}%;">${s.noAnswer.toLocaleString()}</div></div>
+      </div>
+    </div>`;
+
+  const whyEntries = Object.entries(s.whyMap).sort((a,b)=>b[1]-a[1]);
+  const maxWhy = whyEntries.length ? whyEntries[0][1] : 1;
+  const whyRows = whyEntries.length ? whyEntries.map(([w,c]) => `
+    <div class="reason-row">
+      <div class="reason-label">${esc(w)}</div>
+      <div class="reason-track"><div class="reason-fill" style="width:${(c/maxWhy*100).toFixed(0)}%;background:var(--amber);"></div></div>
+      <div class="reason-val">${c}</div>
+    </div>`).join('') : '<div style="color:var(--text-mute);font-size:0.8rem;font-style:italic;">None</div>';
+
+  const card2 = `
+    <div class="funnel-card">
+      <h3>Close Lost Reasons</h3>
+      <div class="journey">Closed Lost breakdown</div>
+      <div class="reasons-label">Why lost?</div>
+      ${whyRows}
+    </div>`;
+
+  const branchEntries = Object.entries(s.branchMap).sort((a,b)=>b[1]-a[1]).slice(0,6);
+  const maxBranch = branchEntries.length ? branchEntries[0][1] : 1;
+  const branchRows = branchEntries.length ? branchEntries.map(([b,c]) => `
+    <div class="fbar-row">
+      <div class="fbar-label">${esc(b)}</div>
+      <div class="fbar-track"><div class="fbar-fill" style="width:${(c/maxBranch*100).toFixed(0)}%;background:#2E6FB0;">${c}</div></div>
+    </div>`).join('') : '<div style="color:var(--text-mute);font-size:0.8rem;font-style:italic;">No wins yet</div>';
+
+  const card3 = `
+    <div class="funnel-card">
+      <h3>Workshops :</h3>
+      <div class="journey">Closed Won by workshop</div>
+      ${branchRows}
+    </div>`;
+
+  document.getElementById(elId).innerHTML = card1 + card2 + card3;
+}
+
+function computeStats(rows, cfg) {
+  if (cfg.mode === 'salesforce') {
+    const total = rows.length;
+    const won  = rows.filter(r => (r[cfg.statusCol]||'').trim().toLowerCase() === cfg.wonValue);
+    const lostAll = rows.filter(r => (r[cfg.statusCol]||'').trim().toLowerCase() === cfg.lostValue);
+
+    // Split lost cases into genuine "Closed Lost" reasons vs "No Answer" (never actually reached).
+    const noAnswerLost = lostAll.filter(r => (r[cfg.whyCol]||'').trim().toLowerCase() === 'no answer');
+    const trueLost = lostAll.filter(r => (r[cfg.whyCol]||'').trim().toLowerCase() !== 'no answer');
+    const other = total - won.length - lostAll.length; // any other/open status
+
+    const whyMap = {};
+    trueLost.forEach(r => {
+      const w = (r[cfg.whyCol]||'').trim() || 'Not specified';
+      whyMap[w] = (whyMap[w]||0)+1;
+    });
+
+    const branchMap = {};
+    won.forEach(r => {
+      const b = (r[cfg.branchCol]||'').trim();
+      if (b) branchMap[b] = (branchMap[b]||0)+1;
+    });
+
+    // Map onto the same shape the KPI/funnel renderers expect:
+    // "answered" = won+trueLost (genuinely resolved, excluding no-answer), "booked" = won,
+    // "notBooked" = trueLost (real losses), "noAnswer" = noAnswerLost + other/open
+    return { total, answered: won.length+trueLost.length, noAnswer: noAnswerLost.length+other,
+             booked: won.length, notBooked: trueLost.length, whyMap, branchMap };
+  }
+
+  const total = rows.length;
+  const answered = rows.filter(r => {
+    const s = (r[cfg.statusCol]||'').trim().toLowerCase();
+    return s === 'answered' || s === 'answer';
+  });
+  const noAnswer = rows.filter(r => {
+    const s = (r[cfg.statusCol]||'').trim().toLowerCase();
+    return s === 'no answer' || s === 'no ans' || s === 'call back later';
+  });
+  const closed   = rows.filter(r => (r[cfg.statusCol]||'').trim().toLowerCase() === 'closed');
+  const booked   = answered.filter(r => (r[cfg.bookedCol]||'').trim().toLowerCase() === 'yes');
+  const notBooked= answered.filter(r => (r[cfg.bookedCol]||'').trim().toLowerCase() === 'no');
+
+  const whyMap = {};
+  notBooked.forEach(r => {
+    const w = (r[cfg.whyCol]||'').trim() || 'Not specified';
+    whyMap[w] = (whyMap[w]||0)+1;
+  });
+
+  const branchMap = {};
+  booked.forEach(r => {
+    const b = (r[cfg.branchCol]||'').trim();
+    if (b) branchMap[b] = (branchMap[b]||0)+1;
+  });
+
+  return { total, answered:answered.length, noAnswer:noAnswer.length+closed.length,
+           booked:booked.length, notBooked:notBooked.length, whyMap, branchMap };
+}
+
+function renderKpi(elId, s, label) {
+  document.getElementById(elId).innerHTML = `
+    <div class="kpi k-total">
+      <div class="range">LIVE &mdash; ${esc(label)}</div>
+      <div class="title">Total Records</div>
+      <div class="value">${s.total}</div>
+      <div class="sub">${s.answered} answered (${pct(s.answered,s.total)}%)</div>
+    </div>
+    <div class="kpi k-attended">
+      <div class="range">LIVE</div>
+      <div class="title">Booked</div>
+      <div class="value">${s.booked}</div>
+      <div class="sub">${pct(s.booked,s.answered)}% of answered</div>
+      <div class="delta up">&#8679; Booking rate</div>
+    </div>
+    <div class="kpi k-satisfied">
+      <div class="range">LIVE</div>
+      <div class="title">Not Booked</div>
+      <div class="value">${s.notBooked}</div>
+      <div class="sub">${pct(s.notBooked,s.answered)}% of answered</div>
+    </div>
+    <div class="kpi k-pending">
+      <div class="range">LIVE</div>
+      <div class="title">No Answer</div>
+      <div class="value">${s.noAnswer}</div>
+      <div class="sub">${pct(s.noAnswer,s.total)}% of total</div>
+    </div>
+  `;
+}
+
+function renderFunnel(elId, s) {
+  // Call outcome card
+  const card1 = `
+    <div class="funnel-card">
+      <h3>Call Outcome</h3>
+      <div class="journey">Dial &rarr; Answered journey</div>
+      <div class="fbar-row">
+        <div class="fbar-label">Total</div>
+        <div class="fbar-track"><div class="fbar-fill" style="width:100%;background:var(--totalbar);">${s.total}</div></div>
+      </div>
+      <div class="fbar-row">
+        <div class="fbar-label">Answered</div>
+        <div class="fbar-track"><div class="fbar-fill" style="width:${pct(s.answered,s.total)}%;background:var(--green);">${s.answered}</div></div>
+      </div>
+      <div class="fbar-row">
+        <div class="fbar-label">Booked</div>
+        <div class="fbar-track"><div class="fbar-fill" style="width:${pct(s.booked,s.total)}%;background:#2E6FB0;">${s.booked}</div></div>
+      </div>
+      <div class="fbar-row">
+        <div class="fbar-label">No Answer</div>
+        <div class="fbar-track"><div class="fbar-fill" style="width:${pct(s.noAnswer,s.total)}%;background:var(--red);">${s.noAnswer}</div></div>
+      </div>
+    </div>`;
+
+  // Not booked reasons
+  const whyEntries = Object.entries(s.whyMap).sort((a,b)=>b[1]-a[1]);
+  const maxWhy = whyEntries.length ? whyEntries[0][1] : 1;
+  let whyRows = whyEntries.length ? whyEntries.map(([w,c]) => `
+    <div class="reason-row">
+      <div class="reason-label">${esc(w)}</div>
+      <div class="reason-track"><div class="reason-fill" style="width:${(c/maxWhy*100).toFixed(0)}%;background:var(--amber);"></div></div>
+      <div class="reason-val">${c}</div>
+    </div>`).join('') : '<div style="color:var(--text-mute);font-size:0.8rem;font-style:italic;">None</div>';
+
+  const card2 = `
+    <div class="funnel-card">
+      <h3>Reasons Not Booked</h3>
+      <div class="journey">Answered &rarr; Not booked</div>
+      <div class="reasons-label">Why not booked?</div>
+      ${whyRows}
+    </div>`;
+
+  // Branch volume
+  const branchEntries = Object.entries(s.branchMap).sort((a,b)=>b[1]-a[1]).slice(0,6);
+  const maxBranch = branchEntries.length ? branchEntries[0][1] : 1;
+  let branchRows = branchEntries.length ? branchEntries.map(([b,c]) => `
+    <div class="fbar-row">
+      <div class="fbar-label">${esc(b)}</div>
+      <div class="fbar-track"><div class="fbar-fill" style="width:${(c/maxBranch*100).toFixed(0)}%;background:#2E6FB0;">${c}</div></div>
+    </div>`).join('') : '<div style="color:var(--text-mute);font-size:0.8rem;font-style:italic;">No bookings yet</div>';
+
+  const card3 = `
+    <div class="funnel-card">
+      <h3>Branches :</h3>
+      <div class="journey">Booked appointments by branch</div>
+      ${branchRows}
+    </div>`;
+
+  document.getElementById(elId).innerHTML = card1 + card2 + card3;
+}
+
+function renderSummaryKpi(total, answered, booked, noAns) {
+  document.getElementById('summary-kpi').innerHTML = `
+    <div class="kpi k-total">
+      <div class="range">ALL SHEETS &mdash; LIVE</div>
+      <div class="title">Total Records</div>
+      <div class="value">${total}</div>
+      <div class="sub">Across 1km, 10k & Lost Customers</div>
+    </div>
+    <div class="kpi k-attended">
+      <div class="range">ALL SHEETS</div>
+      <div class="title">Total Booked</div>
+      <div class="value">${booked}</div>
+      <div class="sub">${pct(booked,answered)}% booking rate (of answered)</div>
+      <div class="delta up">&#8679; Combined conversion</div>
+    </div>
+    <div class="kpi k-satisfied">
+      <div class="range">ALL SHEETS</div>
+      <div class="title">Total Answered</div>
+      <div class="value">${answered}</div>
+      <div class="sub">${pct(answered,total)}% contact rate</div>
+    </div>
+    <div class="kpi k-pending">
+      <div class="range">ALL SHEETS</div>
+      <div class="title">No Answer</div>
+      <div class="value">${noAns}</div>
+      <div class="sub">${pct(noAns,total)}% unreached</div>
+    </div>
+  `;
+}
+
+function switchTab(key) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  document.querySelector('.tab-btn[onclick="switchTab(\''+key+'\')"]').classList.add('active');
+  document.getElementById('tab-'+key).classList.add('active');
+}
+
+loadAll();
+setInterval(loadAll, 60000);
+</script>
+
+</body>
+</html>
