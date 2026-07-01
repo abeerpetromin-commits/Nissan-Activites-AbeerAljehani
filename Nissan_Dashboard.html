@@ -713,20 +713,117 @@ function renderAll() {
   Object.entries(SHEETS).forEach(([key, cfg]) => {
     const rows = filterRows(ALL_DATA[key]||[], cfg);
     const stats = computeStats(rows, cfg);
-    renderKpi('kpi-'+key, stats, cfg.label);
-    renderFunnel('funnel-'+key, stats);
+    if (cfg.mode === 'salesforce') {
+      renderKpiSF('kpi-'+key, stats);
+      renderFunnelSF('funnel-'+key, stats);
+    } else {
+      renderKpi('kpi-'+key, stats, cfg.label);
+      renderFunnel('funnel-'+key, stats);
+    }
   });
+}
+
+function renderKpiSF(elId, s) {
+  document.getElementById(elId).innerHTML = `
+    <div class="kpi k-total">
+      <div class="range">LIVE &mdash; SALESFORCE</div>
+      <div class="title">Total CRM Records</div>
+      <div class="value">${s.total.toLocaleString()}</div>
+      <div class="sub">${s.answered.toLocaleString()} resolved (${pct(s.answered,s.total)}%)</div>
+    </div>
+    <div class="kpi k-attended">
+      <div class="range">LIVE</div>
+      <div class="title">Closed Won</div>
+      <div class="value">${s.booked.toLocaleString()}</div>
+      <div class="sub">${pct(s.booked,s.total)}% of total</div>
+      <div class="delta up">&#8679; Win rate</div>
+    </div>
+    <div class="kpi k-satisfied">
+      <div class="range">LIVE</div>
+      <div class="title">Closed Lost</div>
+      <div class="value">${s.notBooked.toLocaleString()}</div>
+      <div class="sub">${pct(s.notBooked,s.total)}% of total</div>
+    </div>
+    <div class="kpi k-pending">
+      <div class="range">LIVE</div>
+      <div class="title">No Answer</div>
+      <div class="value">${s.noAnswer.toLocaleString()}</div>
+      <div class="sub">${pct(s.noAnswer,s.total)}% of total</div>
+    </div>
+  `;
+}
+
+function renderFunnelSF(elId, s) {
+  const card1 = `
+    <div class="funnel-card">
+      <h3>Closed Outcomes</h3>
+      <div class="journey">Total &rarr; Won / Lost</div>
+      <div class="fbar-row">
+        <div class="fbar-label">Total</div>
+        <div class="fbar-track"><div class="fbar-fill" style="width:100%;background:var(--totalbar);">${s.total.toLocaleString()}</div></div>
+      </div>
+      <div class="fbar-row">
+        <div class="fbar-label">Closed Won</div>
+        <div class="fbar-track"><div class="fbar-fill" style="width:${pct(s.booked,s.total)}%;background:var(--green);">${s.booked.toLocaleString()}</div></div>
+      </div>
+      <div class="fbar-row">
+        <div class="fbar-label">Closed Lost</div>
+        <div class="fbar-track"><div class="fbar-fill" style="width:${pct(s.notBooked,s.total)}%;background:var(--red);">${s.notBooked.toLocaleString()}</div></div>
+      </div>
+      <div class="fbar-row">
+        <div class="fbar-label">No Answer</div>
+        <div class="fbar-track"><div class="fbar-fill gray" style="width:${pct(s.noAnswer,s.total)}%;">${s.noAnswer.toLocaleString()}</div></div>
+      </div>
+    </div>`;
+
+  const whyEntries = Object.entries(s.whyMap).sort((a,b)=>b[1]-a[1]);
+  const maxWhy = whyEntries.length ? whyEntries[0][1] : 1;
+  const whyRows = whyEntries.length ? whyEntries.map(([w,c]) => `
+    <div class="reason-row">
+      <div class="reason-label">${esc(w)}</div>
+      <div class="reason-track"><div class="reason-fill" style="width:${(c/maxWhy*100).toFixed(0)}%;background:var(--amber);"></div></div>
+      <div class="reason-val">${c}</div>
+    </div>`).join('') : '<div style="color:var(--text-mute);font-size:0.8rem;font-style:italic;">None</div>';
+
+  const card2 = `
+    <div class="funnel-card">
+      <h3>Close Lost Reasons</h3>
+      <div class="journey">Closed Lost breakdown</div>
+      <div class="reasons-label">Why lost?</div>
+      ${whyRows}
+    </div>`;
+
+  const branchEntries = Object.entries(s.branchMap).sort((a,b)=>b[1]-a[1]).slice(0,6);
+  const maxBranch = branchEntries.length ? branchEntries[0][1] : 1;
+  const branchRows = branchEntries.length ? branchEntries.map(([b,c]) => `
+    <div class="fbar-row">
+      <div class="fbar-label">${esc(b)}</div>
+      <div class="fbar-track"><div class="fbar-fill" style="width:${(c/maxBranch*100).toFixed(0)}%;background:#2E6FB0;">${c}</div></div>
+    </div>`).join('') : '<div style="color:var(--text-mute);font-size:0.8rem;font-style:italic;">No wins yet</div>';
+
+  const card3 = `
+    <div class="funnel-card">
+      <h3>Workshops :</h3>
+      <div class="journey">Closed Won by workshop</div>
+      ${branchRows}
+    </div>`;
+
+  document.getElementById(elId).innerHTML = card1 + card2 + card3;
 }
 
 function computeStats(rows, cfg) {
   if (cfg.mode === 'salesforce') {
     const total = rows.length;
     const won  = rows.filter(r => (r[cfg.statusCol]||'').trim().toLowerCase() === cfg.wonValue);
-    const lost = rows.filter(r => (r[cfg.statusCol]||'').trim().toLowerCase() === cfg.lostValue);
-    const other = total - won.length - lost.length; // any other/open status
+    const lostAll = rows.filter(r => (r[cfg.statusCol]||'').trim().toLowerCase() === cfg.lostValue);
+
+    // Split lost cases into genuine "Closed Lost" reasons vs "No Answer" (never actually reached).
+    const noAnswerLost = lostAll.filter(r => (r[cfg.whyCol]||'').trim().toLowerCase() === 'no answer');
+    const trueLost = lostAll.filter(r => (r[cfg.whyCol]||'').trim().toLowerCase() !== 'no answer');
+    const other = total - won.length - lostAll.length; // any other/open status
 
     const whyMap = {};
-    lost.forEach(r => {
+    trueLost.forEach(r => {
       const w = (r[cfg.whyCol]||'').trim() || 'Not specified';
       whyMap[w] = (whyMap[w]||0)+1;
     });
@@ -738,9 +835,10 @@ function computeStats(rows, cfg) {
     });
 
     // Map onto the same shape the KPI/funnel renderers expect:
-    // "answered" = won+lost (resolved cases), "booked" = won, "notBooked" = lost, "noAnswer" = other/open
-    return { total, answered: won.length+lost.length, noAnswer: other,
-             booked: won.length, notBooked: lost.length, whyMap, branchMap };
+    // "answered" = won+trueLost (genuinely resolved, excluding no-answer), "booked" = won,
+    // "notBooked" = trueLost (real losses), "noAnswer" = noAnswerLost + other/open
+    return { total, answered: won.length+trueLost.length, noAnswer: noAnswerLost.length+other,
+             booked: won.length, notBooked: trueLost.length, whyMap, branchMap };
   }
 
   const total = rows.length;
