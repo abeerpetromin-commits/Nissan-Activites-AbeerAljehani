@@ -589,29 +589,56 @@ function loadAll() {
   FILTER_MONTH = 'all';
   document.getElementById('load-status').style.display = 'block';
   document.getElementById('load-status').className = 'load-status';
-  document.getElementById('load-status').textContent = 'Loading data from 3 Google Sheets...';
+  document.getElementById('load-status').textContent = 'Loading data from ' + TOTAL_SHEETS + ' Google Sheets...';
   document.getElementById('dashboard-content').style.display = 'none';
 
-  Object.entries(SHEETS).forEach(([key, cfg]) => {
+  const keys = Object.entries(SHEETS);
+  loadSheetSequential(keys, 0);
+}
+
+function loadOneSheet(key, cfg, attempt) {
+  return new Promise((resolve) => {
     Papa.parse(csvUrl(cfg), {
       download: true, header: true, skipEmptyLines: true,
       complete: function(res) {
-        ALL_DATA[key] = res.data.filter(r => {
+        const rows = res.data.filter(r => {
           const name = r['Customer Name'] || r['Customer Full Name'] || '';
           return name.trim() !== '';
         });
-        ALL_DATA[key].forEach(r => {
+        // If we got 0 rows and this is our first try, it may be a throttled/blocked
+        // response from Google rather than a genuinely empty sheet — retry once.
+        if (rows.length === 0 && attempt < 2) {
+          setTimeout(() => resolve(loadOneSheet(key, cfg, attempt + 1)), 900);
+          return;
+        }
+        ALL_DATA[key] = rows;
+        rows.forEach(r => {
           const iso = parseDate(r[cfg.dateCol]);
           if (iso) ALL_DATES.add(iso);
         });
-        loaded++;
-        if (loaded === TOTAL_SHEETS) onAllLoaded();
+        resolve();
       },
-      error: function(err) {
-        document.getElementById('load-status').className = 'load-status error';
-        document.getElementById('load-status').textContent = 'Error loading sheet: ' + err;
+      error: function() {
+        if (attempt < 2) {
+          setTimeout(() => resolve(loadOneSheet(key, cfg, attempt + 1)), 900);
+        } else {
+          ALL_DATA[key] = ALL_DATA[key] || [];
+          resolve();
+        }
       }
     });
+  });
+}
+
+function loadSheetSequential(keys, idx) {
+  if (idx >= keys.length) {
+    onAllLoaded();
+    return;
+  }
+  const [key, cfg] = keys[idx];
+  loadOneSheet(key, cfg, 0).then(() => {
+    loaded++;
+    loadSheetSequential(keys, idx + 1);
   });
 }
 
