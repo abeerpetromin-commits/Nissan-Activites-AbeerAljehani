@@ -63,8 +63,8 @@
   }
   .kpi-row:empty{display:none;margin:0;padding:0;}
   .funnel-row:empty{display:none;}
-  #kpi-1km:empty,#kpi-10k:empty,#kpi-lost:empty{display:none;height:0;margin:0;padding:0;border:none;gap:0;}
-  #funnel-1km:empty,#funnel-10k:empty,#funnel-lost:empty{display:none;height:0;margin:0;}
+  #kpi-1km:empty,#kpi-10k:empty,#kpi-lost:empty,#kpi-sf:empty{display:none;height:0;margin:0;padding:0;border:none;gap:0;}
+  #funnel-1km:empty,#funnel-10k:empty,#funnel-lost:empty,#funnel-sf:empty{display:none;height:0;margin:0;}
   .kpi{
     background:var(--panel);
     border:1px solid var(--line);
@@ -496,6 +496,7 @@
       <button class="tab-btn active" onclick="switchTab('1km')">1km Calls</button>
       <button class="tab-btn" onclick="switchTab('10k')">10k Calls</button>
       <button class="tab-btn" onclick="switchTab('lost')">Lost Customers</button>
+      <button class="tab-btn" onclick="switchTab('sf')">Salesforce</button>
     </div>
 
     <div id="tab-1km" class="tab-content active">
@@ -509,6 +510,10 @@
     <div id="tab-lost" class="tab-content">
       <div id="kpi-lost" style="display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;margin-bottom:1rem;"></div>
       <div class="funnel-row" id="funnel-lost"></div>
+    </div>
+    <div id="tab-sf" class="tab-content">
+      <div id="kpi-sf" style="display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;margin-bottom:1rem;"></div>
+      <div class="funnel-row" id="funnel-sf"></div>
     </div>
 
   </div>
@@ -528,6 +533,9 @@ const SHEETS = {
   "lost": { gid: "2118835780", label: "Lost Customers",
     statusCol: "Status", bookedCol: "Booked an appointment ?", whyCol: "If no, Why ?",
     branchCol: "Branch Name", dateCol: "Created Date" },
+  "sf": { sheetName: "Salesforce Nissan", label: "Salesforce",
+    statusCol: "Status", bookedCol: "Booked?", whyCol: "If no, why?",
+    branchCol: "Branch", dateCol: "Created Date" },
 };
 
 let ALL_DATA = {};   // raw rows per sheet key
@@ -535,10 +543,13 @@ let FILTER = 'all';
 let FILTER_MONTH = 'all';
 let ALL_DATES = new Set();
 let loaded = 0;
-const TOTAL_SHEETS = 3;
+const TOTAL_SHEETS = 4;
 
-function csvUrl(gid) {
-  return "https://docs.google.com/spreadsheets/d/" + SHEET_ID + "/export?format=csv&gid=" + gid;
+function csvUrl(cfg) {
+  if (cfg.sheetName) {
+    return "https://docs.google.com/spreadsheets/d/" + SHEET_ID + "/gviz/tq?tqx=out:csv&sheet=" + encodeURIComponent(cfg.sheetName);
+  }
+  return "https://docs.google.com/spreadsheets/d/" + SHEET_ID + "/export?format=csv&gid=" + cfg.gid;
 }
 
 function pct(n, d) { return d ? (100*n/d).toFixed(1) : "0.0"; }
@@ -582,7 +593,7 @@ function loadAll() {
   document.getElementById('dashboard-content').style.display = 'none';
 
   Object.entries(SHEETS).forEach(([key, cfg]) => {
-    Papa.parse(csvUrl(cfg.gid), {
+    Papa.parse(csvUrl(cfg), {
       download: true, header: true, skipEmptyLines: true,
       complete: function(res) {
         ALL_DATA[key] = res.data.filter(r => {
