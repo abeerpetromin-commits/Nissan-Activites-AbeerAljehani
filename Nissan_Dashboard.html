@@ -533,9 +533,10 @@ const SHEETS = {
   "lost": { gid: "2118835780", label: "Lost Customers",
     statusCol: "Status", bookedCol: "Booked an appointment ?", whyCol: "If no, Why ?",
     branchCol: "Branch Name", dateCol: "Created Date" },
-  "sf": { sheetName: "Salesforce Nissan", label: "Salesforce",
-    statusCol: "Status", bookedCol: "Booked?", whyCol: "If no, why?",
-    branchCol: "Branch", dateCol: "Created Date" },
+  "sf": { gid: "265736254", label: "Salesforce", mode: "salesforce",
+    nameCol: "Account Name", statusCol: "Status",
+    wonValue: "closed won", lostValue: "closed lost",
+    whyCol: "Close Lost Reasons:", branchCol: "Workshop Name", dateCol: "Appointment Start Date" },
 };
 
 let ALL_DATA = {};   // raw rows per sheet key
@@ -602,7 +603,7 @@ function loadOneSheet(key, cfg, attempt) {
       download: true, header: true, skipEmptyLines: true,
       complete: function(res) {
         const rows = res.data.filter(r => {
-          const name = r['Customer Name'] || r['Customer Full Name'] || '';
+          const name = r[cfg.nameCol] || r['Customer Name'] || r['Customer Full Name'] || '';
           return name.trim() !== '';
         });
         // If we got 0 rows and this is our first try, it may be a throttled/blocked
@@ -718,6 +719,30 @@ function renderAll() {
 }
 
 function computeStats(rows, cfg) {
+  if (cfg.mode === 'salesforce') {
+    const total = rows.length;
+    const won  = rows.filter(r => (r[cfg.statusCol]||'').trim().toLowerCase() === cfg.wonValue);
+    const lost = rows.filter(r => (r[cfg.statusCol]||'').trim().toLowerCase() === cfg.lostValue);
+    const other = total - won.length - lost.length; // any other/open status
+
+    const whyMap = {};
+    lost.forEach(r => {
+      const w = (r[cfg.whyCol]||'').trim() || 'Not specified';
+      whyMap[w] = (whyMap[w]||0)+1;
+    });
+
+    const branchMap = {};
+    won.forEach(r => {
+      const b = (r[cfg.branchCol]||'').trim();
+      if (b) branchMap[b] = (branchMap[b]||0)+1;
+    });
+
+    // Map onto the same shape the KPI/funnel renderers expect:
+    // "answered" = won+lost (resolved cases), "booked" = won, "notBooked" = lost, "noAnswer" = other/open
+    return { total, answered: won.length+lost.length, noAnswer: other,
+             booked: won.length, notBooked: lost.length, whyMap, branchMap };
+  }
+
   const total = rows.length;
   const answered = rows.filter(r => {
     const s = (r[cfg.statusCol]||'').trim().toLowerCase();
