@@ -676,10 +676,9 @@ function loadOneSheet(key, cfg, attempt) {
     Papa.parse(csvUrl(cfg, attempt % 2 === 1), {
       download: true, header: true, skipEmptyLines: true,
       complete: function(res) {
-        const rows = res.data.filter(r => {
-          const name = r[cfg.nameCol] || r['Customer Name'] || r['Customer Full Name'] || '';
-          return name.trim() !== '';
-        });
+        const rows = res.data.filter(r =>
+          Object.values(r).some(v => (v||'').toString().trim() !== '')
+        );
         // If we got 0 rows, it may be a throttled/blocked response from Google
         // rather than a genuinely empty sheet — retry on the alternate endpoint.
         if (rows.length === 0 && attempt < MAX_ATTEMPTS - 1) {
