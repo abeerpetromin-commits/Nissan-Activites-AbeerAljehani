@@ -774,10 +774,27 @@ function renderKpiSF(elId, s) {
 }
 
 function funnelCardsSF(s) {
-  const card1 = `
+  const whyEntries = Object.entries(s.whyMap).sort((a,b)=>b[1]-a[1]);
+  const maxWhy = whyEntries.length ? whyEntries[0][1] : 1;
+  const whyRows = whyEntries.length ? whyEntries.map(([w,c]) => `
+    <div class="reason-row">
+      <div class="reason-label">${esc(w)}</div>
+      <div class="reason-track"><div class="reason-fill" style="width:${(c/maxWhy*100).toFixed(0)}%;background:var(--amber);"></div></div>
+      <div class="reason-val">${c}</div>
+    </div>`).join('') : '<div style="color:var(--text-mute);font-size:0.8rem;font-style:italic;">None</div>';
+
+  const branchEntries = Object.entries(s.branchMap).sort((a,b)=>b[1]-a[1]).slice(0,6);
+  const maxBranch = branchEntries.length ? branchEntries[0][1] : 1;
+  const branchRows = branchEntries.length ? branchEntries.map(([b,c]) => `
+    <div class="fbar-row">
+      <div class="fbar-label">${esc(b)}</div>
+      <div class="fbar-track"><div class="fbar-fill" style="width:${(c/maxBranch*100).toFixed(0)}%;background:#2E6FB0;">${c}</div></div>
+    </div>`).join('') : '<div style="color:var(--text-mute);font-size:0.8rem;font-style:italic;">No wins yet</div>';
+
+  return `
     <div class="funnel-card">
-      <h3>Closed Outcomes</h3>
-      <div class="journey">Total &rarr; Won / Lost</div>
+      <h3>Salesforce Outcomes</h3>
+      <div class="journey">${s.total.toLocaleString()} total CRM records</div>
       <div class="fbar-row">
         <div class="fbar-label">Total</div>
         <div class="fbar-track"><div class="fbar-fill" style="width:100%;background:var(--totalbar);">${s.total.toLocaleString()}</div></div>
@@ -794,41 +811,13 @@ function funnelCardsSF(s) {
         <div class="fbar-label">Open / Other</div>
         <div class="fbar-track"><div class="fbar-fill gray" style="width:${pct(s.noAnswer,s.total)}%;">${s.noAnswer.toLocaleString()}</div></div>
       </div>
-    </div>`;
 
-  const whyEntries = Object.entries(s.whyMap).sort((a,b)=>b[1]-a[1]);
-  const maxWhy = whyEntries.length ? whyEntries[0][1] : 1;
-  const whyRows = whyEntries.length ? whyEntries.map(([w,c]) => `
-    <div class="reason-row">
-      <div class="reason-label">${esc(w)}</div>
-      <div class="reason-track"><div class="reason-fill" style="width:${(c/maxWhy*100).toFixed(0)}%;background:var(--amber);"></div></div>
-      <div class="reason-val">${c}</div>
-    </div>`).join('') : '<div style="color:var(--text-mute);font-size:0.8rem;font-style:italic;">None</div>';
-
-  const card2 = `
-    <div class="funnel-card">
-      <h3>Close Lost Reasons</h3>
-      <div class="journey">Closed Lost breakdown</div>
-      <div class="reasons-label">Why lost?</div>
+      <div class="reasons-label">Close Lost Reasons</div>
       ${whyRows}
-    </div>`;
 
-  const branchEntries = Object.entries(s.branchMap).sort((a,b)=>b[1]-a[1]).slice(0,6);
-  const maxBranch = branchEntries.length ? branchEntries[0][1] : 1;
-  const branchRows = branchEntries.length ? branchEntries.map(([b,c]) => `
-    <div class="fbar-row">
-      <div class="fbar-label">${esc(b)}</div>
-      <div class="fbar-track"><div class="fbar-fill" style="width:${(c/maxBranch*100).toFixed(0)}%;background:#2E6FB0;">${c}</div></div>
-    </div>`).join('') : '<div style="color:var(--text-mute);font-size:0.8rem;font-style:italic;">No wins yet</div>';
-
-  const card3 = `
-    <div class="funnel-card">
-      <h3>Workshops :</h3>
-      <div class="journey">Closed Won by workshop</div>
+      <div class="reasons-label" style="margin-top:1rem;">Top Workshops (Closed Won)</div>
       ${branchRows}
     </div>`;
-
-  return card1 + card2 + card3;
 }
 
 function computeStats(rows, cfg) {
@@ -918,8 +907,26 @@ function renderKpi(elId, s, label) {
 }
 
 function funnelCards(cfg, s) {
-  // Call outcome card
-  const card1 = `
+  // Not booked reasons
+  const whyEntries = Object.entries(s.whyMap).sort((a,b)=>b[1]-a[1]);
+  const maxWhy = whyEntries.length ? whyEntries[0][1] : 1;
+  let whyRows = whyEntries.length ? whyEntries.map(([w,c]) => `
+    <div class="reason-row">
+      <div class="reason-label">${esc(w)}</div>
+      <div class="reason-track"><div class="reason-fill" style="width:${(c/maxWhy*100).toFixed(0)}%;background:var(--amber);"></div></div>
+      <div class="reason-val">${c}</div>
+    </div>`).join('') : '<div style="color:var(--text-mute);font-size:0.8rem;font-style:italic;">None</div>';
+
+  // Branch volume
+  const branchEntries = Object.entries(s.branchMap).sort((a,b)=>b[1]-a[1]).slice(0,6);
+  const maxBranch = branchEntries.length ? branchEntries[0][1] : 1;
+  let branchRows = branchEntries.length ? branchEntries.map(([b,c]) => `
+    <div class="fbar-row">
+      <div class="fbar-label">${esc(b)}</div>
+      <div class="fbar-track"><div class="fbar-fill" style="width:${(c/maxBranch*100).toFixed(0)}%;background:#2E6FB0;">${c}</div></div>
+    </div>`).join('') : '<div style="color:var(--text-mute);font-size:0.8rem;font-style:italic;">No bookings yet</div>';
+
+  return `
     <div class="funnel-card">
       <h3>${esc(cfg.label)}</h3>
       <div class="journey">Call &rarr; Booked journey</div>
@@ -939,43 +946,13 @@ function funnelCards(cfg, s) {
         <div class="fbar-label">No Answer</div>
         <div class="fbar-track"><div class="fbar-fill" style="width:${pct(s.noAnswer,s.total)}%;background:var(--red);">${s.noAnswer}</div></div>
       </div>
-    </div>`;
 
-  // Not booked reasons
-  const whyEntries = Object.entries(s.whyMap).sort((a,b)=>b[1]-a[1]);
-  const maxWhy = whyEntries.length ? whyEntries[0][1] : 1;
-  let whyRows = whyEntries.length ? whyEntries.map(([w,c]) => `
-    <div class="reason-row">
-      <div class="reason-label">${esc(w)}</div>
-      <div class="reason-track"><div class="reason-fill" style="width:${(c/maxWhy*100).toFixed(0)}%;background:var(--amber);"></div></div>
-      <div class="reason-val">${c}</div>
-    </div>`).join('') : '<div style="color:var(--text-mute);font-size:0.8rem;font-style:italic;">None</div>';
-
-  const card2 = `
-    <div class="funnel-card">
-      <h3>Reasons Not Booked</h3>
-      <div class="journey">Answered &rarr; Not booked</div>
-      <div class="reasons-label">Why not booked?</div>
+      <div class="reasons-label">Reasons Not Booked</div>
       ${whyRows}
-    </div>`;
 
-  // Branch volume
-  const branchEntries = Object.entries(s.branchMap).sort((a,b)=>b[1]-a[1]).slice(0,6);
-  const maxBranch = branchEntries.length ? branchEntries[0][1] : 1;
-  let branchRows = branchEntries.length ? branchEntries.map(([b,c]) => `
-    <div class="fbar-row">
-      <div class="fbar-label">${esc(b)}</div>
-      <div class="fbar-track"><div class="fbar-fill" style="width:${(c/maxBranch*100).toFixed(0)}%;background:#2E6FB0;">${c}</div></div>
-    </div>`).join('') : '<div style="color:var(--text-mute);font-size:0.8rem;font-style:italic;">No bookings yet</div>';
-
-  const card3 = `
-    <div class="funnel-card">
-      <h3>Branches :</h3>
-      <div class="journey">Booked appointments by branch</div>
+      <div class="reasons-label" style="margin-top:1rem;">Top Branches (Booked)</div>
       ${branchRows}
     </div>`;
-
-  return card1 + card2 + card3;
 }
 
 loadAll();
