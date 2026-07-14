@@ -581,10 +581,13 @@ const SHEET_ID = "1FsZ1B8HA_QeHVwMVs0QkYB99w5Sz2MAmJ6r33tHaEyE";
 const SHEETS = {
   "1km":  { gid: "1444413425",  label: "1km Calls",
     statusCol: "Status", bookedCol: "Booked?", whyCol: "If no, why?",
-    branchCol: "Branch", dateCol: "Created Date" },
+    branchCol: "Branch", dateCol: "SMS Sending Date" },
   "10k":  { gid: "206697134", label: "10k Calls",
     statusCol: "Status", bookedCol: "Booked?", whyCol: "If no, why?",
     branchCol: "Branch", dateCol: "Created Date" },
+  "lost": { gid: "2118835780", label: "Lost Customers",
+    statusCol: "Status", bookedCol: "Booked an appointment ?", whyCol: "If no, Why ?",
+    branchCol: "Branch Name", dateCol: "Created Date" },
   "sf": { gid: "265736254", label: "Salesforce", mode: "salesforce",
     nameCol: "Account Name", statusCol: "Status",
     wonValue: "closed won", lostValue: "closed lost",
@@ -602,7 +605,7 @@ let FILTER_FROM = null;
 let FILTER_TO = null;
 let ALL_DATES = new Set();
 let loaded = 0;
-const TOTAL_SHEETS = 4;
+const TOTAL_SHEETS = 5;
 
 function csvUrl(cfg, useAlt) {
   const bust = "&_cb=" + Date.now() + Math.random().toString(36).slice(2);
