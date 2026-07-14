@@ -486,6 +486,42 @@
     .dash-footer{padding:0.9rem 1.1rem;font-size:0.72rem;justify-content:center;text-align:center;}
   }
 
+  .d1-row{
+    display:grid;grid-template-columns:repeat(auto-fit,minmax(420px,1fr));
+    gap:1rem;margin-bottom:2rem;
+  }
+  .resched-boxes{display:grid;grid-template-columns:1fr 1fr;gap:0.8rem;margin:1rem 0 1.2rem;}
+  .resched-box{border-radius:8px;padding:1rem;text-align:center;}
+  .resched-box.yes{background:var(--green-soft);}
+  .resched-box.no{background:var(--red-soft);}
+  .resched-box .rb-num{font-size:1.6rem;font-weight:800;}
+  .resched-box.yes .rb-num{color:var(--green);}
+  .resched-box.no .rb-num{color:var(--red);}
+  .resched-box .rb-label{font-size:0.72rem;color:var(--text-mute);margin-top:0.2rem;}
+
+  .pivot-card{
+    background:var(--panel);border:1px solid var(--line);border-radius:8px;
+    padding:1.2rem 1.3rem 1.4rem;box-shadow:0 1px 2px rgba(20,30,50,0.04);
+    margin-bottom:2rem;
+  }
+  .pivot-scroll{overflow-x:auto;margin-top:1rem;}
+  .pivot-table{border-collapse:collapse;font-size:0.78rem;white-space:nowrap;min-width:100%;}
+  .pivot-table th{
+    background:#2E6FB0;color:#fff;padding:0.55rem 0.8rem;text-align:left;
+    position:sticky;top:0;font-weight:700;
+  }
+  .pivot-table td{padding:0.5rem 0.8rem;border-bottom:1px solid var(--line);}
+  .pivot-table td.pv-branch{font-weight:600;color:var(--text);white-space:normal;max-width:180px;}
+  .pivot-table td.pv-cell{text-align:center;}
+  .pivot-table tr.pv-total td{font-weight:800;color:#2E6FB0;border-top:2px solid #2E6FB0;background:var(--blue-soft);}
+  .pv-badge{
+    display:inline-block;min-width:1.6rem;padding:0.15rem 0.45rem;border-radius:5px;
+    font-weight:700;color:#fff;font-size:0.76rem;
+  }
+  .pv-badge.low{background:#F0C419;color:#5A4700;}
+  .pv-badge.mid{background:#F0A500;}
+  .pv-badge.high{background:var(--red);}
+
 </style>
 </head>
 <body>
@@ -524,6 +560,12 @@
     <div class="section-label">Conversion Funnels</div>
     <div class="funnel-row" id="funnel-all"></div>
 
+    <div class="section-label" id="d1-section-label" style="display:none;">D+1 Deep Dive</div>
+    <div class="d1-row" id="d1-cards"></div>
+
+    <div class="section-label" id="pivot-section-label" style="display:none;">Reasons Not Satisfied &mdash; Pivot by Branch</div>
+    <div id="d1-pivot"></div>
+
   </div>
 
 </div>
@@ -547,6 +589,12 @@ const SHEETS = {
     nameCol: "Account Name", statusCol: "Status",
     wonValue: "closed won", lostValue: "closed lost",
     whyCol: "Close Lost Reasons:", branchCol: "Workshop Name", dateCol: "Appointment Start Date" },
+  "d1": { gid: "1648743966", label: "D+1", mode: "d1", dmy: true,
+    branchCol: "Branch", statusCol: "Status",
+    attendedCol: "Customer Attented?", satisfiedCol: "If yes? Satisfied?",
+    whyNotSatisfiedCol: "If not Satisfied, why?",
+    rescheduledCol: "Rescheduled?", whyNoRescheduleCol: "Why didn't reschedule?",
+    dateCol: "Date Due in" },
 };
 
 let ALL_DATA = {};   // raw rows per sheet key
@@ -554,7 +602,7 @@ let FILTER_FROM = null;
 let FILTER_TO = null;
 let ALL_DATES = new Set();
 let loaded = 0;
-const TOTAL_SHEETS = 3;
+const TOTAL_SHEETS = 4;
 
 function csvUrl(cfg, useAlt) {
   const bust = "&_cb=" + Date.now() + Math.random().toString(36).slice(2);
@@ -577,16 +625,17 @@ function esc(s) {
   return String(s||'').replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
 }
 
-function parseDate(str) {
+function parseDate(str, dmy) {
   if (!str) return null;
   str = str.trim().split(' ')[0];
   const a = str.split('/');
   if (a.length !== 3) return null;
   const [p1, p2, p3] = a;
-  // Format is MM/DD/YYYY (as seen in the sheets data e.g. 04/07/2026)
+  // Format is MM/DD/YYYY by default (as seen in most sheets, e.g. 04/07/2026).
+  // Pass dmy=true for sheets that use DD/MM/YYYY instead (e.g. D+1's "Date Due in").
   if (p3.length === 4) {
-    const m = p1.padStart(2,'0');
-    const d = p2.padStart(2,'0');
+    const m = (dmy ? p2 : p1).padStart(2,'0');
+    const d = (dmy ? p1 : p2).padStart(2,'0');
     const y = p3;
     return y+'-'+m+'-'+d;
   }
@@ -632,7 +681,7 @@ function loadOneSheet(key, cfg, attempt) {
         }
         ALL_DATA[key] = rows;
         rows.forEach(r => {
-          const iso = parseDate(r[cfg.dateCol]);
+          const iso = parseDate(r[cfg.dateCol], cfg.dmy);
           if (iso) ALL_DATES.add(iso);
         });
         resolve();
@@ -697,7 +746,7 @@ function onApplyRange() {
 function filterRows(rows, cfg) {
   if (!FILTER_FROM && !FILTER_TO) return rows;
   return rows.filter(r => {
-    const iso = parseDate(r[cfg.dateCol]);
+    const iso = parseDate(r[cfg.dateCol], cfg.dmy);
     if (!iso) return false;
     if (FILTER_FROM && iso < FILTER_FROM) return false;
     if (FILTER_TO && iso > FILTER_TO) return false;
@@ -711,7 +760,10 @@ function renderAll() {
   Object.entries(SHEETS).forEach(([key, cfg]) => {
     const rows = filterRows(ALL_DATA[key]||[], cfg);
     const stats = computeStats(rows, cfg);
-    if (cfg.mode === 'salesforce') {
+    if (cfg.mode === 'd1') {
+      renderD1(stats);
+      kpiHtml += kpiSummaryCardD1(stats);
+    } else if (cfg.mode === 'salesforce') {
       kpiHtml += kpiSummaryCardSF(cfg, stats);
       funnelHtml += funnelCardsSF(stats);
     } else {
@@ -740,6 +792,134 @@ function kpiSummaryCardSF(cfg, s) {
       <div class="value">${s.total.toLocaleString()}</div>
       <div class="sub">All CRM records</div>
       <div class="delta up">&#8679; ${s.booked.toLocaleString()} won ${pct(s.booked,s.total)}%</div>
+    </div>`;
+}
+
+function kpiSummaryCardD1(s) {
+  return `
+    <div class="kpi">
+      <div class="title">D+1 Calls</div>
+      <div class="value">${s.total.toLocaleString()}</div>
+      <div class="sub">${s.answered.toLocaleString()} answered (${pct(s.answered,s.total)}%)</div>
+      <div class="delta up">&#8679; ${s.attended.toLocaleString()} attended</div>
+    </div>
+    <div class="kpi">
+      <div class="title">D+1 Satisfaction</div>
+      <div class="value">${pct(s.satisfied,s.attended)}%</div>
+      <div class="sub">${s.satisfied.toLocaleString()} of ${s.attended.toLocaleString()} satisfied</div>
+      <div class="delta down">${s.unsatisfied.toLocaleString()} unsatisfied</div>
+    </div>`;
+}
+
+function reasonListHtml(map, emptyMsg) {
+  const entries = Object.entries(map).sort((a,b)=>b[1]-a[1]);
+  if (!entries.length) return `<div style="color:var(--text-mute);font-size:0.8rem;font-style:italic;">${emptyMsg}</div>`;
+  const max = entries[0][1];
+  return entries.map(([w,c]) => `
+    <div class="reason-row">
+      <div class="reason-label">${esc(w)}</div>
+      <div class="reason-track"><div class="reason-fill" style="width:${(c/max*100).toFixed(0)}%;background:var(--red);"></div></div>
+      <div class="reason-val">${c}</div>
+    </div>`).join('');
+}
+
+function renderD1(s) {
+  document.getElementById('d1-section-label').style.display = 'block';
+  document.getElementById('pivot-section-label').style.display = 'block';
+
+  const card1 = `
+    <div class="funnel-card">
+      <h3>D+1 Follow-up</h3>
+      <div class="journey">Call &rarr; Satisfied journey</div>
+      <div class="fbar-row">
+        <div class="fbar-label">Total Calls</div>
+        <div class="fbar-track"><div class="fbar-fill" style="width:100%;background:#2E6FB0;">${s.total.toLocaleString()} ${pct(s.total,s.total)}%</div></div>
+      </div>
+      <div class="fbar-row">
+        <div class="fbar-label">Answered</div>
+        <div class="fbar-track"><div class="fbar-fill" style="width:${pct(s.answered,s.total)}%;background:#4C9BD8;">${s.answered.toLocaleString()} ${pct(s.answered,s.total)}%</div></div>
+      </div>
+      <div class="fbar-row">
+        <div class="fbar-label">Attended</div>
+        <div class="fbar-track"><div class="fbar-fill" style="width:${pct(s.attended,s.total)}%;background:var(--green);">${s.attended.toLocaleString()} ${pct(s.attended,s.total)}%</div></div>
+      </div>
+      <div class="fbar-row">
+        <div class="fbar-label">Satisfied</div>
+        <div class="fbar-track"><div class="fbar-fill" style="width:${pct(s.satisfied,s.total)}%;background:#1D7A44;">${s.satisfied.toLocaleString()} ${pct(s.satisfied,s.total)}%</div></div>
+      </div>
+      <div class="fbar-row">
+        <div class="fbar-label">Unsatisfied</div>
+        <div class="fbar-track"><div class="fbar-fill" style="width:${pct(s.unsatisfied,s.total)}%;background:var(--red);">${s.unsatisfied.toLocaleString()} ${pct(s.unsatisfied,s.total)}%</div></div>
+      </div>
+
+      <div class="reasons-label">Unsatisfied Reasons</div>
+      ${reasonListHtml(s.unsatisfiedReasonMap, 'None')}
+    </div>`;
+
+  const card2 = `
+    <div class="funnel-card">
+      <h3>D+1 &mdash; Non-Attendance</h3>
+      <div class="journey">${s.notAttended.toLocaleString()} customers did not attend</div>
+
+      <div class="reasons-label">Rescheduled?</div>
+      <div class="resched-boxes">
+        <div class="resched-box yes">
+          <div class="rb-num">${s.rescheduledYes.toLocaleString()}</div>
+          <div class="rb-label">Yes &mdash; rescheduled</div>
+        </div>
+        <div class="resched-box no">
+          <div class="rb-num">${s.rescheduledNo.toLocaleString()}</div>
+          <div class="rb-label">No &mdash; not rescheduled</div>
+        </div>
+      </div>
+
+      <div class="reasons-label">Why Didn't Reschedule?</div>
+      ${reasonListHtml(s.noRescheduleReasonMap, 'None')}
+    </div>`;
+
+  document.getElementById('d1-cards').innerHTML = card1 + card2;
+  document.getElementById('d1-pivot').innerHTML = pivotTableHtml(s);
+}
+
+function pivotTableHtml(s) {
+  const branches = Object.keys(s.pivot).sort((a,b) =>
+    Object.values(s.pivot[b]).reduce((x,y)=>x+y,0) - Object.values(s.pivot[a]).reduce((x,y)=>x+y,0)
+  );
+  const reasons = Object.keys(s.reasonTotals).sort((a,b) => s.reasonTotals[b]-s.reasonTotals[a]);
+
+  if (!branches.length || !reasons.length) {
+    return `
+      <div class="pivot-card">
+        <h3>D+1 &mdash; Not Satisfied Cases</h3>
+        <div class="journey">Attended &rarr; Not satisfied journey</div>
+        <div style="color:var(--text-mute);font-size:0.85rem;font-style:italic;margin-top:1rem;">No unsatisfied cases in this range.</div>
+      </div>`;
+  }
+
+  function badge(v) {
+    if (!v) return '';
+    const cls = v <= 3 ? 'low' : (v <= 11 ? 'mid' : 'high');
+    return `<span class="pv-badge ${cls}">${v}</span>`;
+  }
+
+  let thead = '<tr><th>Branch</th>' + reasons.map(r => `<th>${esc(r)}</th>`).join('') + '</tr>';
+  let rows = branches.map(b => {
+    const cells = reasons.map(r => `<td class="pv-cell">${badge(s.pivot[b][r]||0)}</td>`).join('');
+    return `<tr><td class="pv-branch">${esc(b)}</td>${cells}</tr>`;
+  }).join('');
+  const totalCells = reasons.map(r => `<td class="pv-cell">${s.reasonTotals[r]}</td>`).join('');
+  const totalRow = `<tr class="pv-total"><td>Grand Total</td>${totalCells}</tr>`;
+
+  return `
+    <div class="pivot-card">
+      <h3>D+1 &mdash; Not Satisfied Cases</h3>
+      <div class="journey">Attended &rarr; Not satisfied journey</div>
+      <div class="pivot-scroll">
+        <table class="pivot-table">
+          <thead>${thead}</thead>
+          <tbody>${rows}${totalRow}</tbody>
+        </table>
+      </div>
     </div>`;
 }
 
@@ -821,6 +1001,49 @@ function funnelCardsSF(s) {
 }
 
 function computeStats(rows, cfg) {
+  if (cfg.mode === 'd1') {
+    const total = rows.length;
+    const answered = rows.filter(r => (r[cfg.statusCol]||'').trim().toLowerCase() === 'answered');
+    const attended = answered.filter(r => (r[cfg.attendedCol]||'').trim().toLowerCase() === 'yes');
+    const notAttended = answered.filter(r => (r[cfg.attendedCol]||'').trim().toLowerCase() === 'no');
+    const satisfied = attended.filter(r => (r[cfg.satisfiedCol]||'').trim().toLowerCase() === 'yes');
+    const unsatisfied = attended.filter(r => (r[cfg.satisfiedCol]||'').trim().toLowerCase() !== 'yes');
+
+    const unsatisfiedReasonMap = {};
+    unsatisfied.forEach(r => {
+      const w = (r[cfg.whyNotSatisfiedCol]||'').trim();
+      if (!w) return;
+      unsatisfiedReasonMap[w] = (unsatisfiedReasonMap[w]||0)+1;
+    });
+
+    const rescheduledYes = notAttended.filter(r => (r[cfg.rescheduledCol]||'').trim().toLowerCase() === 'yes');
+    const rescheduledNo = notAttended.filter(r => (r[cfg.rescheduledCol]||'').trim().toLowerCase() !== 'yes');
+    const noRescheduleReasonMap = {};
+    rescheduledNo.forEach(r => {
+      const w = (r[cfg.whyNoRescheduleCol]||'').trim();
+      if (!w) return;
+      noRescheduleReasonMap[w] = (noRescheduleReasonMap[w]||0)+1;
+    });
+
+    // Branch x Reason pivot (unsatisfied cases only)
+    const pivot = {}; // { branch: { reason: count } }
+    const reasonTotals = {};
+    unsatisfied.forEach(r => {
+      const b = (r[cfg.branchCol]||'').trim() || 'Unknown';
+      const w = (r[cfg.whyNotSatisfiedCol]||'').trim();
+      if (!w) return;
+      if (!pivot[b]) pivot[b] = {};
+      pivot[b][w] = (pivot[b][w]||0)+1;
+      reasonTotals[w] = (reasonTotals[w]||0)+1;
+    });
+
+    return { total, answered: answered.length, attended: attended.length,
+             satisfied: satisfied.length, unsatisfied: unsatisfied.length,
+             unsatisfiedReasonMap, notAttended: notAttended.length,
+             rescheduledYes: rescheduledYes.length, rescheduledNo: rescheduledNo.length,
+             noRescheduleReasonMap, pivot, reasonTotals };
+  }
+
   if (cfg.mode === 'salesforce') {
     const total = rows.length;
     const won  = rows.filter(r => (r[cfg.statusCol]||'').trim().toLowerCase() === cfg.wonValue);
