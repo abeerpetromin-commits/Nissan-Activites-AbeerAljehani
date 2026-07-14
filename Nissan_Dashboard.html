@@ -721,18 +721,22 @@ function onAllLoaded() {
   document.getElementById('last-updated').textContent = new Date().toLocaleTimeString();
 }
 
+let userSetRange = false; // becomes true once the person explicitly clicks Apply
+
 function populateDateRangeDefaults() {
-  // Only set defaults the first time (don't clobber a range the user already picked).
+  // Keep auto-expanding to the full combined range on every load (including after
+  // adding new sheets) UNTIL the person deliberately picks their own range via Apply.
+  // This prevents a stale, narrower range from a previous session silently hiding
+  // all data from a newly-added sheet.
+  if (userSetRange) return;
   const fromEl = document.getElementById('date-from');
   const toEl = document.getElementById('date-to');
-  if (fromEl.value === '' && toEl.value === '' && !FILTER_FROM && !FILTER_TO) {
-    const sorted = [...ALL_DATES].sort((a,b) => a.localeCompare(b));
-    if (sorted.length) {
-      fromEl.value = sorted[0];
-      toEl.value = sorted[sorted.length-1];
-      FILTER_FROM = sorted[0];
-      FILTER_TO = sorted[sorted.length-1];
-    }
+  const sorted = [...ALL_DATES].sort((a,b) => a.localeCompare(b));
+  if (sorted.length) {
+    fromEl.value = sorted[0];
+    toEl.value = sorted[sorted.length-1];
+    FILTER_FROM = sorted[0];
+    FILTER_TO = sorted[sorted.length-1];
   }
 }
 
@@ -741,6 +745,7 @@ function onDateRangeInput() {
 }
 
 function onApplyRange() {
+  userSetRange = true;
   FILTER_FROM = document.getElementById('date-from').value || null;
   FILTER_TO = document.getElementById('date-to').value || null;
   renderAll();
