@@ -637,8 +637,12 @@ function parseDate(str, dmy) {
   // Format is MM/DD/YYYY by default (as seen in most sheets, e.g. 04/07/2026).
   // Pass dmy=true for sheets that use DD/MM/YYYY instead (e.g. D+1's "Date Due in").
   if (p3.length === 4) {
-    const m = (dmy ? p2 : p1).padStart(2,'0');
-    const d = (dmy ? p1 : p2).padStart(2,'0');
+    let m = (dmy ? p2 : p1).padStart(2,'0');
+    let d = (dmy ? p1 : p2).padStart(2,'0');
+    // Safety guard: a month can never be >12. If it is, the day/month were
+    // actually the other way around in this particular value — swap them
+    // rather than emit an invalid date that silently breaks filtering.
+    if (parseInt(m,10) > 12) { const t = m; m = d; d = t; }
     const y = p3;
     return y+'-'+m+'-'+d;
   }
