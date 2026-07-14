@@ -27,7 +27,7 @@
   }
   *{box-sizing:border-box;margin:0;padding:0;}
   html,body{background:var(--bg);color:var(--text);font-family:var(--sans);}
-  body{min-height:100vh;padding-bottom:3rem;}
+  body{min-height:100vh;}
 
   .header{
     background:linear-gradient(135deg,#8B0020 0%,#C50030 50%,#E8003A 100%);
@@ -45,7 +45,7 @@
   .header .titles h1{font-size:1.45rem;font-weight:700;letter-spacing:0.01em;color:#FFFFFF;}
   .header .titles p{font-size:0.82rem;color:rgba(255,255,255,0.75);margin-top:0.15rem;font-weight:500;}
 
-  .wrap{max-width:1400px;margin:0 auto;padding:0 2.5rem;}
+  .wrap{max-width:1400px;margin:0 auto;padding:0 2.5rem 3rem;}
   .refresh-bar{margin-top:1.8rem;}
 
   .section-label{
@@ -428,22 +428,32 @@
   .load-status{text-align:center;padding:2rem;color:var(--text-mute);font-size:0.85rem;}
   .load-status.error{color:var(--red);}
   .refresh-bar{
-    display:flex;align-items:center;justify-content:flex-end;flex-wrap:wrap;
-    gap:0.6rem;font-size:0.74rem;color:var(--text-mute);padding:0.6rem 0;
+    display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;
+    gap:0.9rem;font-size:0.82rem;color:var(--text-dim);
+    background:var(--panel);border:1px solid var(--line);border-radius:10px;
+    padding:0.9rem 1.3rem;box-shadow:0 1px 2px rgba(20,10,15,0.04);
   }
-  .refresh-bar button{
-    font-size:0.74rem;font-weight:600;color:var(--red);
-    background:var(--red-soft);border:1px solid var(--red-soft);
-    border-radius:5px;padding:0.3rem 0.8rem;cursor:pointer;
-  }
-  .refresh-bar button:hover{background:var(--gray-soft);}
-  .refresh-bar .dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--green);}
+  .refresh-bar .filters-left{display:flex;align-items:center;gap:0.7rem;flex-wrap:wrap;}
   .refresh-bar .filter-label{font-weight:600;color:var(--text-dim);}
-  .refresh-bar select{
-    font-size:0.78rem;font-family:var(--sans);color:var(--text);
+  .refresh-bar input[type="date"]{
+    font-size:0.82rem;font-family:var(--sans);color:var(--text);
     background:var(--panel);border:1px solid var(--line);
-    border-radius:5px;padding:0.3rem 0.6rem;cursor:pointer;
+    border-radius:6px;padding:0.4rem 0.6rem;cursor:pointer;
   }
+  .refresh-bar .btn-apply{
+    font-size:0.82rem;font-weight:700;color:#fff;
+    background:#2E6FB0;border:1px solid #2E6FB0;
+    border-radius:6px;padding:0.45rem 1.1rem;cursor:pointer;
+  }
+  .refresh-bar .btn-apply:hover{background:#255c92;}
+  .refresh-bar .btn-refresh{
+    font-size:0.82rem;font-weight:700;color:#fff;
+    background:#2C3E50;border:1px solid #2C3E50;
+    border-radius:6px;padding:0.45rem 1.1rem;cursor:pointer;
+    display:flex;align-items:center;gap:0.4rem;
+  }
+  .refresh-bar .btn-refresh:hover{background:#1E2B37;}
+  .refresh-bar .last-updated-txt{color:var(--text-mute);font-size:0.78rem;white-space:nowrap;}
   .summary-grid{
     display:grid;grid-template-columns:repeat(3,1fr);gap:1.4rem;margin-top:1.4rem;
   }
@@ -459,12 +469,21 @@
   @media(max-width:600px){.summary-grid{grid-template-columns:1fr;}}
 
   .dash-footer{
-    text-align:center;
-    font-size:0.72rem;
-    color:var(--text-mute);
-    padding:2rem 1rem 1rem;
-    margin-top:1rem;
-    border-top:1px solid var(--line);
+    background:linear-gradient(135deg,#8B0020 0%,#C50030 50%,#E8003A 100%);
+    color:rgba(255,255,255,0.92);
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:1rem;
+    flex-wrap:wrap;
+    font-size:0.78rem;
+    font-weight:600;
+    padding:0.9rem 2.5rem;
+    margin-top:2rem;
+  }
+  .dash-footer .fl,.dash-footer .fr{white-space:nowrap;}
+  @media(max-width:700px){
+    .dash-footer{padding:0.9rem 1.1rem;font-size:0.72rem;justify-content:center;text-align:center;}
   }
 
 </style>
@@ -484,48 +503,34 @@
 <div class="wrap">
 
   <div class="refresh-bar">
-    <span id="sync-status"><span class="dot"></span> Live &middot; <span id="last-updated">loading...</span></span>
-    <label class="filter-label" for="month-filter">Month:</label>
-    <select id="month-filter" onchange="onMonthChange()">
-      <option value="all">All months</option>
-    </select>
-    <label class="filter-label" for="date-filter">Day:</label>
-    <select id="date-filter" onchange="onFilterChange()">
-      <option value="all">All days</option>
-    </select>
-    <button onclick="loadAll()">&#8635; Refresh</button>
+    <div class="filters-left">
+      <span class="filter-label">From</span>
+      <input type="date" id="date-from" onchange="onDateRangeInput()">
+      <span class="filter-label">To</span>
+      <input type="date" id="date-to" onchange="onDateRangeInput()">
+      <button class="btn-apply" onclick="onApplyRange()">Apply</button>
+      <button class="btn-refresh" onclick="loadAll()">&#8635; Refresh</button>
+    </div>
+    <span class="last-updated-txt">Last updated: <span id="last-updated">loading...</span></span>
   </div>
 
   <div id="load-status" class="load-status">Loading live data from Google Sheets&hellip;</div>
 
   <div id="dashboard-content" style="display:none;">
 
-    <div class="section-label">Sheet Detail</div>
-    <div class="tab-bar">
-      <button class="tab-btn active" onclick="switchTab('1km')">1km Calls</button>
-      <button class="tab-btn" onclick="switchTab('10k')">10k Calls</button>
-      <button class="tab-btn" onclick="switchTab('sf')">Salesforce</button>
-    </div>
+    <div class="section-label">Key Performance Indicators</div>
+    <div id="kpi-summary" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:1rem;margin-bottom:2rem;"></div>
 
-    <div id="tab-1km" class="tab-content active">
-      <div id="kpi-1km" style="display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;margin-bottom:1rem;"></div>
-      <div class="funnel-row" id="funnel-1km"></div>
-    </div>
-    <div id="tab-10k" class="tab-content">
-      <div id="kpi-10k" style="display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;margin-bottom:1rem;"></div>
-      <div class="funnel-row" id="funnel-10k"></div>
-    </div>
-    <div id="tab-sf" class="tab-content">
-      <div id="kpi-sf" style="display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;margin-bottom:1rem;"></div>
-      <div class="funnel-row" id="funnel-sf"></div>
-    </div>
+    <div class="section-label">Conversion Funnels</div>
+    <div class="funnel-row" id="funnel-all"></div>
 
   </div>
 
-  <div class="dash-footer">
-    Nissan &middot; Petromin Retention &amp; Outbound &middot; Live Data from Google Sheets &middot; Created by Team Leader : Abeer Aljehani
-  </div>
+</div>
 
+<div class="dash-footer">
+  <div class="fl">Nissan &middot; Petromin Retention &amp; Outbound &middot; Live Data from Google Sheets</div>
+  <div class="fr">Created by Team Leader : Abeer Aljehani</div>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
@@ -545,8 +550,8 @@ const SHEETS = {
 };
 
 let ALL_DATA = {};   // raw rows per sheet key
-let FILTER = 'all';
-let FILTER_MONTH = 'all';
+let FILTER_FROM = null;
+let FILTER_TO = null;
 let ALL_DATES = new Set();
 let loaded = 0;
 const TOTAL_SHEETS = 3;
@@ -600,8 +605,6 @@ function loadAll() {
   loaded = 0;
   ALL_DATA = {};
   ALL_DATES = new Set();
-  FILTER = 'all';
-  FILTER_MONTH = 'all';
   document.getElementById('load-status').style.display = 'block';
   document.getElementById('load-status').className = 'load-status';
   document.getElementById('load-status').textContent = 'Loading data from ' + TOTAL_SHEETS + ' Google Sheets...';
@@ -659,83 +662,85 @@ function loadSheetSequential(keys, idx) {
 }
 
 function onAllLoaded() {
-  populateDateFilter();
+  populateDateRangeDefaults();
   renderAll();
   document.getElementById('load-status').style.display = 'none';
   document.getElementById('dashboard-content').style.display = 'block';
-  document.getElementById('last-updated').textContent = new Date().toLocaleString();
+  document.getElementById('last-updated').textContent = new Date().toLocaleTimeString();
 }
 
-function populateDateFilter() {
-  const sorted = [...ALL_DATES].sort((a,b) => a.localeCompare(b));
-  const months = [...new Set(sorted.map(iso => iso.slice(0,7)))].sort();
-
-  const monthSel = document.getElementById('month-filter');
-  const prevMonth = FILTER_MONTH;
-  monthSel.innerHTML = '<option value="all">All months</option>';
-  months.forEach(ym => {
-    const [y,m] = ym.split('-');
-    const label = new Date(parseInt(y), parseInt(m)-1, 1).toLocaleString('en-US', {month:'long', year:'numeric'});
-    const o = document.createElement('option');
-    o.value = ym; o.textContent = label;
-    monthSel.appendChild(o);
-  });
-  monthSel.value = (prevMonth !== 'all' && months.includes(prevMonth)) ? prevMonth : 'all';
-  FILTER_MONTH = monthSel.value;
-
-  populateDayFilter(sorted);
+function populateDateRangeDefaults() {
+  // Only set defaults the first time (don't clobber a range the user already picked).
+  const fromEl = document.getElementById('date-from');
+  const toEl = document.getElementById('date-to');
+  if (fromEl.value === '' && toEl.value === '' && !FILTER_FROM && !FILTER_TO) {
+    const sorted = [...ALL_DATES].sort((a,b) => a.localeCompare(b));
+    if (sorted.length) {
+      fromEl.value = sorted[0];
+      toEl.value = sorted[sorted.length-1];
+      FILTER_FROM = sorted[0];
+      FILTER_TO = sorted[sorted.length-1];
+    }
+  }
 }
 
-function populateDayFilter(sortedDates) {
-  const daySel = document.getElementById('date-filter');
-  daySel.innerHTML = '<option value="all">All days</option>';
-  const days = sortedDates.filter(iso =>
-    FILTER_MONTH === 'all' || iso.slice(0,7) === FILTER_MONTH
-  );
-  days.forEach(iso => {
-    const o = document.createElement('option');
-    o.value = iso; o.textContent = fmtDate(iso);
-    daySel.appendChild(o);
-  });
-  const validDay = days.includes(FILTER);
-  daySel.value = validDay ? FILTER : 'all';
-  FILTER = daySel.value;
+function onDateRangeInput() {
+  // Just track the picker values as the user edits them; Apply commits the filter.
 }
 
-function onMonthChange() {
-  FILTER_MONTH = document.getElementById('month-filter').value;
-  FILTER = 'all';
-  const sorted = [...ALL_DATES].sort((a,b) => a.localeCompare(b));
-  populateDayFilter(sorted);
-  renderAll();
-}
-
-function onFilterChange() {
-  FILTER = document.getElementById('date-filter').value;
+function onApplyRange() {
+  FILTER_FROM = document.getElementById('date-from').value || null;
+  FILTER_TO = document.getElementById('date-to').value || null;
   renderAll();
 }
 
 function filterRows(rows, cfg) {
-  if (FILTER !== 'all') return rows.filter(r => parseDate(r[cfg.dateCol]) === FILTER);
-  if (FILTER_MONTH !== 'all') return rows.filter(r => {
+  if (!FILTER_FROM && !FILTER_TO) return rows;
+  return rows.filter(r => {
     const iso = parseDate(r[cfg.dateCol]);
-    return iso && iso.slice(0,7) === FILTER_MONTH;
+    if (!iso) return false;
+    if (FILTER_FROM && iso < FILTER_FROM) return false;
+    if (FILTER_TO && iso > FILTER_TO) return false;
+    return true;
   });
-  return rows;
 }
 
 function renderAll() {
+  let kpiHtml = '';
+  let funnelHtml = '';
   Object.entries(SHEETS).forEach(([key, cfg]) => {
     const rows = filterRows(ALL_DATA[key]||[], cfg);
     const stats = computeStats(rows, cfg);
     if (cfg.mode === 'salesforce') {
-      renderKpiSF('kpi-'+key, stats);
-      renderFunnelSF('funnel-'+key, stats);
+      kpiHtml += kpiSummaryCardSF(cfg, stats);
+      funnelHtml += funnelCardsSF(stats);
     } else {
-      renderKpi('kpi-'+key, stats, cfg.label);
-      renderFunnel('funnel-'+key, stats);
+      kpiHtml += kpiSummaryCard(cfg, stats);
+      funnelHtml += funnelCards(cfg, stats);
     }
   });
+  document.getElementById('kpi-summary').innerHTML = kpiHtml;
+  document.getElementById('funnel-all').innerHTML = funnelHtml;
+}
+
+function kpiSummaryCard(cfg, s) {
+  return `
+    <div class="kpi">
+      <div class="title">${esc(cfg.label)}</div>
+      <div class="value">${s.total.toLocaleString()}</div>
+      <div class="sub">${s.answered.toLocaleString()} answered (${pct(s.answered,s.total)}%)</div>
+      <div class="delta up">&#8679; ${s.booked.toLocaleString()} booked ${pct(s.booked,s.answered)}%</div>
+    </div>`;
+}
+
+function kpiSummaryCardSF(cfg, s) {
+  return `
+    <div class="kpi">
+      <div class="title">${esc(cfg.label)} Total</div>
+      <div class="value">${s.total.toLocaleString()}</div>
+      <div class="sub">All CRM records</div>
+      <div class="delta up">&#8679; ${s.booked.toLocaleString()} won ${pct(s.booked,s.total)}%</div>
+    </div>`;
 }
 
 function renderKpiSF(elId, s) {
@@ -768,7 +773,7 @@ function renderKpiSF(elId, s) {
   `;
 }
 
-function renderFunnelSF(elId, s) {
+function funnelCardsSF(s) {
   const card1 = `
     <div class="funnel-card">
       <h3>Closed Outcomes</h3>
@@ -823,7 +828,7 @@ function renderFunnelSF(elId, s) {
       ${branchRows}
     </div>`;
 
-  document.getElementById(elId).innerHTML = card1 + card2 + card3;
+  return card1 + card2 + card3;
 }
 
 function computeStats(rows, cfg) {
@@ -912,12 +917,12 @@ function renderKpi(elId, s, label) {
   `;
 }
 
-function renderFunnel(elId, s) {
+function funnelCards(cfg, s) {
   // Call outcome card
   const card1 = `
     <div class="funnel-card">
-      <h3>Call Outcome</h3>
-      <div class="journey">Dial &rarr; Answered journey</div>
+      <h3>${esc(cfg.label)}</h3>
+      <div class="journey">Call &rarr; Booked journey</div>
       <div class="fbar-row">
         <div class="fbar-label">Total</div>
         <div class="fbar-track"><div class="fbar-fill" style="width:100%;background:var(--totalbar);">${s.total}</div></div>
@@ -970,48 +975,11 @@ function renderFunnel(elId, s) {
       ${branchRows}
     </div>`;
 
-  document.getElementById(elId).innerHTML = card1 + card2 + card3;
-}
-
-function renderSummaryKpi(total, answered, booked, noAns) {
-  document.getElementById('summary-kpi').innerHTML = `
-    <div class="kpi k-total">
-      <div class="range">ALL SHEETS &mdash; LIVE</div>
-      <div class="title">Total Records</div>
-      <div class="value">${total}</div>
-      <div class="sub">Across 1km, 10k & Lost Customers</div>
-    </div>
-    <div class="kpi k-attended">
-      <div class="range">ALL SHEETS</div>
-      <div class="title">Total Booked</div>
-      <div class="value">${booked}</div>
-      <div class="sub">${pct(booked,answered)}% booking rate (of answered)</div>
-      <div class="delta up">&#8679; Combined conversion</div>
-    </div>
-    <div class="kpi k-satisfied">
-      <div class="range">ALL SHEETS</div>
-      <div class="title">Total Answered</div>
-      <div class="value">${answered}</div>
-      <div class="sub">${pct(answered,total)}% contact rate</div>
-    </div>
-    <div class="kpi k-pending">
-      <div class="range">ALL SHEETS</div>
-      <div class="title">No Answer</div>
-      <div class="value">${noAns}</div>
-      <div class="sub">${pct(noAns,total)}% unreached</div>
-    </div>
-  `;
-}
-
-function switchTab(key) {
-  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
-  document.querySelector('.tab-btn[onclick="switchTab(\''+key+'\')"]').classList.add('active');
-  document.getElementById('tab-'+key).classList.add('active');
+  return card1 + card2 + card3;
 }
 
 loadAll();
-setInterval(loadAll, 60000);
+// Auto-refresh disabled — use the Refresh button to reload manually.
 </script>
 
 </body>
