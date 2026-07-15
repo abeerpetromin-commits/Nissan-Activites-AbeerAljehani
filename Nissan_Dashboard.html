@@ -597,7 +597,12 @@ const SHEETS = {
     attendedCol: "Customer Attented?", satisfiedCol: "If yes? Satisfied?",
     whyNotSatisfiedCol: "If not Satisfied, why?",
     rescheduledCol: "Rescheduled?", whyNoRescheduleCol: "Why didn't reschedule?",
-    dateCol: "Date Due in" },
+    dateCol: "Date Due in",
+    useIndexMap: true,
+    indexMap: ["Branch","WIP","Date Due in","Time In","Booking Stauts",
+      "Service Advisor Name","Customer Full Name","Mobile Num","Manufacturer",
+      "Status","Customer Attented?","If yes? Satisfied?","If not Satisfied, why?",
+      "Rescheduled?","Why didn't reschedule?","Rescheduled Branch","New WIP","Comment"] },
 };
 
 let ALL_DATA = {};   // raw rows per sheet key
@@ -674,9 +679,20 @@ function loadOneSheet(key, cfg, attempt) {
   const MAX_ATTEMPTS = 4; // 0,1,2,3 = 4 tries total
   return new Promise((resolve) => {
     Papa.parse(csvUrl(cfg, attempt % 2 === 1), {
-      download: true, header: true, skipEmptyLines: true,
+      download: true, header: !cfg.useIndexMap, skipEmptyLines: true,
       complete: function(res) {
-        const rows = res.data.filter(r =>
+        let data = res.data;
+        if (cfg.useIndexMap) {
+          // Ignore the parsed header row and map by fixed column position instead —
+          // Google's gviz export sometimes returns a corrupted/duplicated header row,
+          // which silently breaks name-based column lookup.
+          data = data.slice(1).map(arr => {
+            const obj = {};
+            cfg.indexMap.forEach((colName, i) => { obj[colName] = arr[i] || ''; });
+            return obj;
+          });
+        }
+        const rows = data.filter(r =>
           Object.values(r).some(v => (v||'').toString().trim() !== '')
         );
         // If we got 0 rows, it may be a throttled/blocked response from Google
