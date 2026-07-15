@@ -507,20 +507,50 @@
   .pivot-scroll{overflow-x:auto;margin-top:1rem;}
   .pivot-table{border-collapse:collapse;font-size:0.78rem;white-space:nowrap;min-width:100%;}
   .pivot-table th{
-    background:#2E6FB0;color:#fff;padding:0.55rem 0.8rem;text-align:left;
+    background:linear-gradient(135deg,#8B0020 0%,#C50030 60%,#E8003A 100%);
+    color:#fff;padding:0.55rem 0.8rem;text-align:center;
     position:sticky;top:0;font-weight:700;
   }
+  .pivot-table th:first-child{text-align:left;}
   .pivot-table td{padding:0.5rem 0.8rem;border-bottom:1px solid var(--line);}
   .pivot-table td.pv-branch{font-weight:600;color:var(--text);white-space:normal;max-width:180px;}
   .pivot-table td.pv-cell{text-align:center;}
-  .pivot-table tr.pv-total td{font-weight:800;color:#2E6FB0;border-top:2px solid #2E6FB0;background:var(--blue-soft);}
+  .pivot-table td.pv-rowtotal{font-weight:800;color:var(--red);background:var(--red-soft);}
+  .pivot-table tr.pv-total td{font-weight:800;color:#fff;background:var(--red);border-top:2px solid #8B0020;}
   .pv-badge{
     display:inline-block;min-width:1.6rem;padding:0.15rem 0.45rem;border-radius:5px;
-    font-weight:700;color:#fff;font-size:0.76rem;
+    font-weight:700;color:#fff;font-size:0.76rem;cursor:pointer;
+    transition:transform 0.1s ease;
   }
+  .pv-badge:hover{transform:scale(1.12);}
   .pv-badge.low{background:#F0C419;color:#5A4700;}
   .pv-badge.mid{background:#F0A500;}
   .pv-badge.high{background:var(--red);}
+
+  .case-detail-header{
+    display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;
+  }
+  .case-close-btn{
+    background:none;border:none;font-size:1.4rem;line-height:1;color:var(--text-mute);
+    cursor:pointer;padding:0 0.3rem;
+  }
+  .case-close-btn:hover{color:var(--text);}
+  .case-row{
+    border:1px solid var(--line);border-radius:8px;
+    padding:0.9rem 1rem;margin-bottom:0.8rem;
+  }
+  .case-num{font-size:0.7rem;font-weight:700;letter-spacing:0.08em;color:var(--text-mute);margin-bottom:0.5rem;}
+  .case-tags{display:flex;gap:0.5rem;margin-bottom:0.7rem;flex-wrap:wrap;}
+  .case-tag{
+    background:var(--blue-soft);color:#2E6FB0;font-size:0.76rem;font-weight:600;
+    padding:0.2rem 0.65rem;border-radius:5px;
+  }
+  .case-comment-label{font-size:0.68rem;font-weight:700;letter-spacing:0.08em;color:var(--text-mute);margin-bottom:0.3rem;}
+  .case-comment{
+    background:var(--bg);border:1px solid var(--line);border-radius:6px;
+    padding:0.55rem 0.75rem;font-size:0.82rem;color:var(--text);
+  }
+  .case-comment em{color:var(--text-mute);font-style:italic;}
 
 </style>
 </head>
@@ -563,7 +593,7 @@
     <div class="section-label" id="d1-section-label" style="display:none;">D+1 Deep Dive</div>
     <div class="d1-row" id="d1-cards"></div>
 
-    <div class="section-label" id="pivot-section-label" style="display:none;">Reasons Not Satisfied &mdash; Pivot by Branch</div>
+    <div class="section-label" id="pivot-section-label" style="display:none;">Unsatisfied Customers &mdash; Detail</div>
     <div id="d1-pivot"></div>
 
   </div>
@@ -917,37 +947,75 @@ function pivotTableHtml(s) {
   if (!branches.length || !reasons.length) {
     return `
       <div class="pivot-card">
-        <h3>D+1 &mdash; Not Satisfied Cases</h3>
+        <h3>Reasons Not Satisfied &mdash; Pivot by Branch</h3>
         <div class="journey">Attended &rarr; Not satisfied journey</div>
         <div style="color:var(--text-mute);font-size:0.85rem;font-style:italic;margin-top:1rem;">No unsatisfied cases in this range.</div>
-      </div>`;
+      </div>
+      <div id="d1-case-detail"></div>`;
   }
 
-  function badge(v) {
+  // Stash for the click handler to look up by index (avoids escaping branch/reason
+  // text — some contain quotes/commas — inside inline onclick attributes).
+  D1_PIVOT_STATE = { branches, reasons, pivotCases: s.pivotCases };
+
+  function badge(v, bi, ri) {
     if (!v) return '';
     const cls = v <= 3 ? 'low' : (v <= 11 ? 'mid' : 'high');
-    return `<span class="pv-badge ${cls}">${v}</span>`;
+    return `<span class="pv-badge ${cls}" onclick="showD1Cases(${bi},${ri})">${v}</span>`;
   }
 
-  let thead = '<tr><th>Branch</th>' + reasons.map(r => `<th>${esc(r)}</th>`).join('') + '</tr>';
-  let rows = branches.map(b => {
-    const cells = reasons.map(r => `<td class="pv-cell">${badge(s.pivot[b][r]||0)}</td>`).join('');
-    return `<tr><td class="pv-branch">${esc(b)}</td>${cells}</tr>`;
+  const rowTotal = b => reasons.reduce((sum,r) => sum + (s.pivot[b][r]||0), 0);
+
+  let thead = '<tr><th>Branch</th>' + reasons.map(r => `<th>${esc(r)}</th>`).join('') + '<th>Total</th></tr>';
+  let rows = branches.map((b,bi) => {
+    const cells = reasons.map((r,ri) => `<td class="pv-cell">${badge(s.pivot[b][r]||0, bi, ri)}</td>`).join('');
+    return `<tr><td class="pv-branch">${esc(b)}</td>${cells}<td class="pv-cell pv-rowtotal">${rowTotal(b)}</td></tr>`;
   }).join('');
   const totalCells = reasons.map(r => `<td class="pv-cell">${s.reasonTotals[r]}</td>`).join('');
-  const totalRow = `<tr class="pv-total"><td>Grand Total</td>${totalCells}</tr>`;
+  const totalRow = `<tr class="pv-total"><td>Grand Total</td>${totalCells}<td class="pv-cell">${s.unsatisfied}</td></tr>`;
 
   return `
     <div class="pivot-card">
-      <h3>D+1 &mdash; Not Satisfied Cases</h3>
-      <div class="journey">Attended &rarr; Not satisfied journey</div>
+      <h3>Reasons Not Satisfied &mdash; Pivot by Branch</h3>
+      <div class="journey">Attended &rarr; Not satisfied (${s.unsatisfied} of ${s.attended}) journey &middot; click a number to view case details</div>
       <div class="pivot-scroll">
         <table class="pivot-table">
           <thead>${thead}</thead>
           <tbody>${rows}${totalRow}</tbody>
         </table>
       </div>
+    </div>
+    <div id="d1-case-detail"></div>`;
+}
+
+let D1_PIVOT_STATE = null;
+
+function showD1Cases(bi, ri) {
+  if (!D1_PIVOT_STATE) return;
+  const branch = D1_PIVOT_STATE.branches[bi];
+  const reason = D1_PIVOT_STATE.reasons[ri];
+  const cases = (D1_PIVOT_STATE.pivotCases[branch] && D1_PIVOT_STATE.pivotCases[branch][reason]) || [];
+
+  const caseRows = cases.map((c, i) => `
+    <div class="case-row">
+      <div class="case-num">CASE ${i+1}</div>
+      <div class="case-tags">
+        <span class="case-tag">${esc(branch)}</span>
+        <span class="case-tag">${esc(reason)}</span>
+      </div>
+      <div class="case-comment-label">Comment</div>
+      <div class="case-comment">${c.comment ? esc(c.comment) : '<em>No comment</em>'}</div>
+    </div>`).join('');
+
+  document.getElementById('d1-case-detail').innerHTML = `
+    <div class="pivot-card">
+      <div class="case-detail-header">
+        <h3>${esc(branch)} &middot; ${esc(reason)} (${cases.length} cases)</h3>
+        <button class="case-close-btn" onclick="document.getElementById('d1-case-detail').innerHTML=''">&times;</button>
+      </div>
+      ${caseRows}
     </div>`;
+  document.getElementById('d1-case-detail').scrollIntoView({behavior:'smooth', block:'nearest'});
 }
 
 function renderKpiSF(elId, s) {
@@ -1039,6 +1107,7 @@ function computeStats(rows, cfg) {
     // Branch x Reason pivot (unsatisfied cases only)
     const pivot = {}; // { branch: { reason: count } }
     const reasonTotals = {};
+    const pivotCases = {}; // { branch: { reason: [ {comment}, ... ] } }
     unsatisfied.forEach(r => {
       const b = (r[cfg.branchCol]||'').trim() || 'Unknown';
       const w = (r[cfg.whyNotSatisfiedCol]||'').trim();
@@ -1046,13 +1115,16 @@ function computeStats(rows, cfg) {
       if (!pivot[b]) pivot[b] = {};
       pivot[b][w] = (pivot[b][w]||0)+1;
       reasonTotals[w] = (reasonTotals[w]||0)+1;
+      if (!pivotCases[b]) pivotCases[b] = {};
+      if (!pivotCases[b][w]) pivotCases[b][w] = [];
+      pivotCases[b][w].push({ comment: (r['Comment']||'').trim() });
     });
 
     return { total, answered: answered.length, attended: attended.length,
              satisfied: satisfied.length, unsatisfied: unsatisfied.length,
              unsatisfiedReasonMap, notAttended: notAttended.length,
              rescheduledYes: rescheduledYes.length, rescheduledNo: rescheduledNo.length,
-             noRescheduleReasonMap, pivot, reasonTotals };
+             noRescheduleReasonMap, pivot, reasonTotals, pivotCases };
   }
 
   if (cfg.mode === 'salesforce') {
