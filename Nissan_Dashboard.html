@@ -552,6 +552,38 @@
   }
   .case-comment em{color:var(--text-mute);font-style:italic;}
 
+  .ab-card{max-width:100%;}
+  .ab-top{display:flex;align-items:center;gap:2.5rem;flex-wrap:wrap;margin:1.2rem 0 1.5rem;}
+  .ab-donut-wrap{position:relative;width:130px;height:130px;flex-shrink:0;}
+  .ab-donut-center{
+    position:absolute;top:0;left:0;width:100%;height:100%;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+  }
+  .ab-donut-pct{font-size:1.4rem;font-weight:800;color:var(--text);}
+  .ab-donut-label{font-size:0.68rem;color:var(--text-mute);}
+  .ab-legend{flex:1;min-width:220px;}
+  .ab-legend-row{
+    display:flex;align-items:center;gap:0.6rem;
+    padding:0.6rem 0;border-bottom:1px solid var(--line);
+  }
+  .ab-legend-row:last-child{border-bottom:none;}
+  .ab-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
+  .ab-legend-label{flex:1;font-size:0.85rem;color:var(--text-dim);}
+  .ab-legend-val{font-weight:700;font-size:0.9rem;color:var(--text);}
+  .ab-legend-pct{
+    font-size:0.7rem;font-weight:700;padding:0.1rem 0.45rem;border-radius:4px;margin-left:0.5rem;
+  }
+  .ab-legend-pct.green{background:var(--green-soft);color:var(--green);}
+  .ab-legend-pct.red{background:var(--red-soft);color:var(--red);}
+  .ab-bar-row{
+    display:grid;grid-template-columns:130px 1fr auto;align-items:center;
+    gap:0.7rem;margin-bottom:0.55rem;
+  }
+  .ab-bar-label{font-size:0.78rem;color:var(--text-dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .ab-bar-track{background:var(--gray-soft);border-radius:4px;height:9px;overflow:hidden;}
+  .ab-bar-fill{background:var(--green);height:100%;border-radius:4px;}
+  .ab-bar-val{font-size:0.8rem;font-weight:700;color:var(--text);min-width:2.5rem;text-align:right;}
+
 </style>
 </head>
 <body>
@@ -595,6 +627,9 @@
 
     <div class="section-label" id="pivot-section-label" style="display:none;">Unsatisfied Customers &mdash; Detail</div>
     <div id="d1-pivot"></div>
+
+    <div class="section-label">Answer Rates Across All Activities</div>
+    <div id="allbookings-card"></div>
 
   </div>
 
@@ -814,23 +849,92 @@ function filterRows(rows, cfg) {
 function renderAll() {
   let kpiHtml = '';
   let funnelHtml = '';
+  const activities = []; // { label, booked, notBooked }
   Object.entries(SHEETS).forEach(([key, cfg]) => {
     const rows = filterRows(ALL_DATA[key]||[], cfg);
     const stats = computeStats(rows, cfg);
     if (cfg.mode === 'd1') {
       renderD1(stats);
       kpiHtml += kpiSummaryCardD1(stats);
+      activities.push({ label: 'D+1 Rescheduled', booked: stats.rescheduledYes, notBooked: stats.rescheduledNo });
     } else if (cfg.mode === 'salesforce') {
       kpiHtml += kpiSummaryCardSF(cfg, stats);
       funnelHtml += funnelCardsSF(stats);
+      activities.push({ label: cfg.label + ' Won', booked: stats.booked, notBooked: stats.notBooked });
     } else {
       kpiHtml += kpiSummaryCard(cfg, stats);
       funnelHtml += funnelCards(cfg, stats);
+      activities.push({ label: cfg.label, booked: stats.booked, notBooked: stats.notBooked });
     }
   });
   document.getElementById('kpi-summary').innerHTML = kpiHtml;
   document.getElementById('funnel-all').innerHTML = funnelHtml;
+  renderAllBookings(activities);
 }
+
+function renderAllBookings(activities) {
+  const totalBooked = activities.reduce((s,a) => s + a.booked, 0);
+  const totalNotBooked = activities.reduce((s,a) => s + a.notBooked, 0);
+  const total = totalBooked + totalNotBooked;
+  const bookedPct = total ? Math.round(100*totalBooked/total) : 0;
+  const notBookedPct = 100 - bookedPct;
+
+  // Donut chart: two overlaid circles using stroke-dasharray/offset.
+  const r = 45, cx = 60, cy = 60;
+  const C = 2 * Math.PI * r;
+  const greenLen = (bookedPct/100) * C;
+  const redLen = C - greenLen;
+
+  const donut = `
+    <svg viewBox="0 0 120 120" width="130" height="130" style="transform:rotate(-90deg);">
+      <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="var(--gray-soft)" stroke-width="16"/>
+      <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="var(--red)" stroke-width="16"
+        stroke-dasharray="${redLen} ${C}" stroke-dashoffset="${-greenLen}"/>
+      <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="var(--green)" stroke-width="16"
+        stroke-dasharray="${greenLen} ${C}" stroke-linecap="butt"/>
+    </svg>`;
+
+  const sorted = [...activities].sort((a,b) => b.booked - a.booked);
+  const maxBooked = sorted.length ? sorted[0].booked : 1;
+  const barsHtml = sorted.map(a => `
+    <div class="ab-bar-row">
+      <div class="ab-bar-label">${esc(a.label)}</div>
+      <div class="ab-bar-track"><div class="ab-bar-fill" style="width:${maxBooked ? (a.booked/maxBooked*100).toFixed(0) : 0}%;"></div></div>
+      <div class="ab-bar-val">${a.booked.toLocaleString()}</div>
+    </div>`).join('');
+
+  document.getElementById('allbookings-card').innerHTML = `
+    <div class="funnel-card ab-card">
+      <h3>All Bookings</h3>
+      <div class="journey">All channels combined</div>
+      <div class="ab-top">
+        <div class="ab-donut-wrap">
+          ${donut}
+          <div class="ab-donut-center">
+            <div class="ab-donut-pct">${bookedPct}%</div>
+            <div class="ab-donut-label">booking rate</div>
+          </div>
+        </div>
+        <div class="ab-legend">
+          <div class="ab-legend-row">
+            <span class="ab-dot" style="background:var(--green);"></span>
+            <span class="ab-legend-label">Booked</span>
+            <span class="ab-legend-val">${totalBooked.toLocaleString()}</span>
+            <span class="ab-legend-pct green">${bookedPct}%</span>
+          </div>
+          <div class="ab-legend-row">
+            <span class="ab-dot" style="background:var(--red);"></span>
+            <span class="ab-legend-label">Not Booked</span>
+            <span class="ab-legend-val">${totalNotBooked.toLocaleString()}</span>
+            <span class="ab-legend-pct red">${notBookedPct}%</span>
+          </div>
+        </div>
+      </div>
+      <div class="reasons-label">Booked Per Activity</div>
+      ${barsHtml}
+    </div>`;
+}
+
 
 function kpiSummaryCard(cfg, s) {
   return `
@@ -890,23 +994,23 @@ function renderD1(s) {
       <div class="journey">Call &rarr; Satisfied journey</div>
       <div class="fbar-row">
         <div class="fbar-label">Total Calls</div>
-        <div class="fbar-track"><div class="fbar-fill" style="width:100%;background:#2E6FB0;">${s.total.toLocaleString()} ${pct(s.total,s.total)}%</div></div>
+        <div class="fbar-track"><div class="fbar-fill" style="width:100%;background:#2E6FB0;">${s.total.toLocaleString()} 100%</div></div>
       </div>
       <div class="fbar-row">
         <div class="fbar-label">Answered</div>
-        <div class="fbar-track"><div class="fbar-fill" style="width:${pct(s.answered,s.total)}%;background:#4C9BD8;">${s.answered.toLocaleString()} ${pct(s.answered,s.total)}%</div></div>
+        <div class="fbar-track"><div class="fbar-fill" style="width:${pct(s.answered,s.total)}%;background:#4C9BD8;">${s.answered.toLocaleString()} ${pct(s.answered,s.total)}% of total</div></div>
       </div>
       <div class="fbar-row">
         <div class="fbar-label">Attended</div>
-        <div class="fbar-track"><div class="fbar-fill" style="width:${pct(s.attended,s.total)}%;background:var(--green);">${s.attended.toLocaleString()} ${pct(s.attended,s.total)}%</div></div>
+        <div class="fbar-track"><div class="fbar-fill" style="width:${pct(s.attended,s.answered)}%;background:var(--green);">${s.attended.toLocaleString()} ${pct(s.attended,s.answered)}% of answered</div></div>
       </div>
       <div class="fbar-row">
         <div class="fbar-label">Satisfied</div>
-        <div class="fbar-track"><div class="fbar-fill" style="width:${pct(s.satisfied,s.total)}%;background:#1D7A44;">${s.satisfied.toLocaleString()} ${pct(s.satisfied,s.total)}%</div></div>
+        <div class="fbar-track"><div class="fbar-fill" style="width:${pct(s.satisfied,s.attended)}%;background:#1D7A44;">${s.satisfied.toLocaleString()} ${pct(s.satisfied,s.attended)}% of attended</div></div>
       </div>
       <div class="fbar-row">
         <div class="fbar-label">Unsatisfied</div>
-        <div class="fbar-track"><div class="fbar-fill" style="width:${pct(s.unsatisfied,s.total)}%;background:var(--red);">${s.unsatisfied.toLocaleString()} ${pct(s.unsatisfied,s.total)}%</div></div>
+        <div class="fbar-track"><div class="fbar-fill" style="width:${pct(s.unsatisfied,s.attended)}%;background:var(--red);">${s.unsatisfied.toLocaleString()} ${pct(s.unsatisfied,s.attended)}% of attended</div></div>
       </div>
 
       <div class="reasons-label">Unsatisfied Reasons</div>
