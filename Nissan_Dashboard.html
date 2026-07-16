@@ -125,6 +125,8 @@
     padding:0 0.6rem;
     font-weight:700;font-size:0.85rem;color:#fff;
     min-width:36px;
+    white-space:nowrap;
+    text-shadow:0 0 4px rgba(0,0,0,0.35);
   }
   .fbar-fill.gray{color:var(--text-mute);background:var(--gray-soft);border:1px solid var(--gray);}
 
@@ -998,19 +1000,19 @@ function renderD1(s) {
       </div>
       <div class="fbar-row">
         <div class="fbar-label">Answered</div>
-        <div class="fbar-track"><div class="fbar-fill" style="width:${pct(s.answered,s.total)}%;background:#4C9BD8;">${s.answered.toLocaleString()} ${pct(s.answered,s.total)}% of total</div></div>
+        <div class="fbar-track"><div class="fbar-fill" style="width:${pct(s.answered,s.total)}%;background:#4C9BD8;">${s.answered.toLocaleString()} ${pct(s.answered,s.total)}%</div></div>
       </div>
       <div class="fbar-row">
         <div class="fbar-label">Attended</div>
-        <div class="fbar-track"><div class="fbar-fill" style="width:${pct(s.attended,s.answered)}%;background:var(--green);">${s.attended.toLocaleString()} ${pct(s.attended,s.answered)}% of answered</div></div>
+        <div class="fbar-track"><div class="fbar-fill" style="width:${pct(s.attended,s.total)}%;background:var(--green);">${s.attended.toLocaleString()} ${pct(s.attended,s.total)}%</div></div>
       </div>
       <div class="fbar-row">
         <div class="fbar-label">Satisfied</div>
-        <div class="fbar-track"><div class="fbar-fill" style="width:${pct(s.satisfied,s.attended)}%;background:#1D7A44;">${s.satisfied.toLocaleString()} ${pct(s.satisfied,s.attended)}% of attended</div></div>
+        <div class="fbar-track"><div class="fbar-fill" style="width:${pct(s.satisfied,s.total)}%;background:#1D7A44;">${s.satisfied.toLocaleString()} ${pct(s.satisfied,s.total)}%</div></div>
       </div>
       <div class="fbar-row">
         <div class="fbar-label">Unsatisfied</div>
-        <div class="fbar-track"><div class="fbar-fill" style="width:${pct(s.unsatisfied,s.attended)}%;background:var(--red);">${s.unsatisfied.toLocaleString()} ${pct(s.unsatisfied,s.attended)}% of attended</div></div>
+        <div class="fbar-track"><div class="fbar-fill" style="width:${pct(s.unsatisfied,s.total)}%;background:var(--red);">${s.unsatisfied.toLocaleString()} ${pct(s.unsatisfied,s.total)}%</div></div>
       </div>
 
       <div class="reasons-label">Unsatisfied Reasons</div>
