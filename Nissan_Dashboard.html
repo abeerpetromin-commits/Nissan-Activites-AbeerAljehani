@@ -649,7 +649,10 @@ const SHEETS = {
   "sf": { gid: "265736254", label: "Salesforce", mode: "salesforce",
     nameCol: "Account Name", statusCol: "Status",
     wonValue: "closed won", lostValue: "closed lost",
-    whyCol: "Close Lost Reasons:", branchCol: "Workshop Name", dateCol: "Appointment Start Date" },
+    whyCol: "Close Lost Reasons:", branchCol: "Workshop Name", dateCol: "Appointment Start Date",
+    useIndexMap: true,
+    indexMap: ["Case Number","Service Type","Account Name","Contact: Phone","Subject",
+      "City","Appointment Start Date","Status","Workshop Name","Close Lost Reasons:"] },
 };
 
 let ALL_DATA = {};   // raw rows per sheet key
@@ -1215,8 +1218,9 @@ function computeStats(rows, cfg) {
 
   if (cfg.mode === 'salesforce') {
     const total = rows.length;
-    const won  = rows.filter(r => (r[cfg.statusCol]||'').trim().toLowerCase() === cfg.wonValue);
-    const lostAll = rows.filter(r => (r[cfg.statusCol]||'').trim().toLowerCase() === cfg.lostValue);
+    const st = r => (r[cfg.statusCol]||'').toString().replace(/\s+/g,' ').trim().toLowerCase();
+    const won  = rows.filter(r => st(r).includes('won'));
+    const lostAll = rows.filter(r => st(r).includes('lost'));
     const other = total - won.length - lostAll.length; // any other/open status
 
     // "No Answer" is counted back into Closed Lost, and also shown as its own
