@@ -624,12 +624,6 @@
     <div class="section-label">Conversion Funnels</div>
     <div class="funnel-row" id="funnel-all"></div>
 
-    <div class="section-label" id="d1-section-label" style="display:none;">D+1 Deep Dive</div>
-    <div class="d1-row" id="d1-cards"></div>
-
-    <div class="section-label" id="pivot-section-label" style="display:none;">Unsatisfied Customers &mdash; Detail</div>
-    <div id="d1-pivot"></div>
-
     <div class="section-label">Answer Rates Across All Activities</div>
     <div id="allbookings-card"></div>
 
@@ -652,24 +646,10 @@ const SHEETS = {
   "10k":  { gid: "206697134", label: "10k Calls",
     statusCol: "Status", bookedCol: "Booked?", whyCol: "If no, why?",
     branchCol: "Branch", dateCol: "Created Date" },
-  "lost": { gid: "2118835780", label: "Lost Customers",
-    statusCol: "Status", bookedCol: "Booked an appointment ?", whyCol: "If no, Why ?",
-    branchCol: "Branch Name", dateCol: "Created Date" },
   "sf": { gid: "265736254", label: "Salesforce", mode: "salesforce",
     nameCol: "Account Name", statusCol: "Status",
     wonValue: "closed won", lostValue: "closed lost",
     whyCol: "Close Lost Reasons:", branchCol: "Workshop Name", dateCol: "Appointment Start Date" },
-  "d1": { gid: "1648743966", label: "D+1", mode: "d1", dmy: true,
-    branchCol: "Branch", statusCol: "Status",
-    attendedCol: "Customer Attented?", satisfiedCol: "If yes? Satisfied?",
-    whyNotSatisfiedCol: "If not Satisfied, why?",
-    rescheduledCol: "Rescheduled?", whyNoRescheduleCol: "Why didn't reschedule?",
-    dateCol: "Date Due in",
-    useIndexMap: true,
-    indexMap: ["Branch","WIP","Date Due in","Time In","Booking Stauts",
-      "Service Advisor Name","Customer Full Name","Mobile Num","Manufacturer",
-      "Status","Customer Attented?","If yes? Satisfied?","If not Satisfied, why?",
-      "Rescheduled?","Why didn't reschedule?","Rescheduled Branch","New WIP","Comment"] },
 };
 
 let ALL_DATA = {};   // raw rows per sheet key
@@ -677,7 +657,7 @@ let FILTER_FROM = null;
 let FILTER_TO = null;
 let ALL_DATES = new Set();
 let loaded = 0;
-const TOTAL_SHEETS = 5;
+const TOTAL_SHEETS = 3;
 
 function csvUrl(cfg, useAlt) {
   const bust = "&_cb=" + Date.now() + Math.random().toString(36).slice(2);
